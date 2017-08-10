@@ -1,12 +1,58 @@
 package com.ych.shcm.o2o.service;
 
-import java.math.BigDecimal;
-import java.math.MathContext;
-import java.math.RoundingMode;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import javax.annotation.Resource;
-
+import com.ych.core.model.CommonOperationResult;
+import com.ych.core.model.CommonOperationResultWidthData;
+import com.ych.core.model.PagedList;
+import com.ych.core.model.SystemParameterHolder;
+import com.ych.shcm.o2o.dao.CarDao;
+import com.ych.shcm.o2o.dao.CarModelDao;
+import com.ych.shcm.o2o.dao.OrderAppointmentDao;
+import com.ych.shcm.o2o.dao.OrderBillDao;
+import com.ych.shcm.o2o.dao.OrderDao;
+import com.ych.shcm.o2o.dao.OrderEvaluationDao;
+import com.ych.shcm.o2o.dao.OrderServicePackDao;
+import com.ych.shcm.o2o.dao.OrderServicePackItemDao;
+import com.ych.shcm.o2o.dao.OrderStatusHisDao;
+import com.ych.shcm.o2o.dao.PayOrderDao;
+import com.ych.shcm.o2o.dao.ServiceItemDao;
+import com.ych.shcm.o2o.dao.ServiceProviderDao;
+import com.ych.shcm.o2o.dao.ServiceProviderSettleDao;
+import com.ych.shcm.o2o.dao.ShopDao;
+import com.ych.shcm.o2o.dao.ShopSettleDao;
+import com.ych.shcm.o2o.dao.UserCarDao;
+import com.ych.shcm.o2o.event.OrderStatusChanged;
+import com.ych.shcm.o2o.model.Car;
+import com.ych.shcm.o2o.model.CarModel;
+import com.ych.shcm.o2o.model.Constants;
+import com.ych.shcm.o2o.model.Order;
+import com.ych.shcm.o2o.model.OrderAppointment;
+import com.ych.shcm.o2o.model.OrderBill;
+import com.ych.shcm.o2o.model.OrderEvaluation;
+import com.ych.shcm.o2o.model.OrderServicePack;
+import com.ych.shcm.o2o.model.OrderServicePackItem;
+import com.ych.shcm.o2o.model.OrderStatus;
+import com.ych.shcm.o2o.model.OrderStatusCount;
+import com.ych.shcm.o2o.model.OrderStatusHis;
+import com.ych.shcm.o2o.model.PayOrder;
+import com.ych.shcm.o2o.model.ServiceItem;
+import com.ych.shcm.o2o.model.ServiceItemType;
+import com.ych.shcm.o2o.model.ServicePack;
+import com.ych.shcm.o2o.model.ServiceProvider;
+import com.ych.shcm.o2o.model.ServiceProviderSettleDate;
+import com.ych.shcm.o2o.model.ServiceProviderSettleDateSummary;
+import com.ych.shcm.o2o.model.ServiceProviderSettleDetail;
+import com.ych.shcm.o2o.model.ServiceProviderSettleStatus;
+import com.ych.shcm.o2o.model.Shop;
+import com.ych.shcm.o2o.model.ShopSettleDate;
+import com.ych.shcm.o2o.model.ShopSettleDateSummary;
+import com.ych.shcm.o2o.model.ShopSettleDetail;
+import com.ych.shcm.o2o.model.ShopSettleStatus;
+import com.ych.shcm.o2o.model.UserCar;
+import com.ych.shcm.o2o.parameter.QueryOrderAppointmentListParameter;
+import com.ych.shcm.o2o.parameter.QueryOrderListParameter;
+import com.ych.shcm.o2o.service.systemparamholder.ServiceProviderIncomesRate;
+import com.ych.shcm.o2o.service.systemparamholder.ServiceProviderSettleDelay;
+import com.ych.shcm.o2o.service.systemparamholder.ShopSettleDelay;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateFormatUtils;
@@ -18,18 +64,17 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 
-import com.ych.core.model.CommonOperationResult;
-import com.ych.core.model.CommonOperationResultWidthData;
-import com.ych.core.model.PagedList;
-import com.ych.core.model.SystemParameterHolder;
-import com.ych.shcm.o2o.dao.*;
-import com.ych.shcm.o2o.event.OrderStatusChanged;
-import com.ych.shcm.o2o.model.*;
-import com.ych.shcm.o2o.parameter.QueryOrderAppointmentListParameter;
-import com.ych.shcm.o2o.parameter.QueryOrderListParameter;
-import com.ych.shcm.o2o.service.systemparamholder.ServiceProviderIncomesRate;
-import com.ych.shcm.o2o.service.systemparamholder.ServiceProviderSettleDelay;
-import com.ych.shcm.o2o.service.systemparamholder.ShopSettleDelay;
+import javax.annotation.Resource;
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 订单服务
@@ -101,6 +146,8 @@ public class OrderService {
     private ApplicationEventPublisher appCtx;
     @Autowired
     private ServiceProviderDao serviceProviderDao;
+    @Autowired
+    private UserCarDao userCarDao;
 
     /**
      * 通过ID取得订单详情
@@ -137,11 +184,14 @@ public class OrderService {
         Map<String, Object> map = new HashMap<>();
         Car car = carDao.selectById(order.getCarId());
 
+        UserCar userCar = userCarDao.selectUserCarByUserIdAndCarId(order.getUserId(), order.getCarId());
+
         String orderNo = generateOrderNo();
         order.setOrderNo(orderNo);
         List<ServicePack> servicePacks = carService.getServicePackOfCar(car.getModelId());
 
         try {
+            Assert.notNull(userCar, "车辆已不属于当前用户,订单创建失败");
             Assert.notNull(order.getCarId(), "车辆id不能为空");
             Assert.notNull(car, "车辆信息不存在");
             //Assert.notNull(order.getAccessChannelId(), "渠道id不能为空");
@@ -162,7 +212,7 @@ public class OrderService {
         } else {
             if (car.getFirstOrderStatus() == OrderStatus.UNPAYED || car.getFirstOrderStatus() == OrderStatus.PAYED) {
                 ret.setResult(CommonOperationResult.IllegalOperation);
-                ret.setDescription("首保订单未完成时无法创建新订单");
+                ret.setDescription("首保订单未完成时无法创建新订单,请查看订单列表");
                 return ret;
             }
         }
@@ -508,7 +558,7 @@ public class OrderService {
         Shop shop = shopDao.selectById(order.getShopId());
         int count = shop.getEvaluationCount();
         shop.setEvaluationCount(count + 1);
-        shop.setAverageScore((shop.getAverageScore() * count  + orderEvaluation.getAverage().doubleValue())/(count + 1));
+        shop.setAverageScore((shop.getAverageScore() * count + orderEvaluation.getAverage().doubleValue()) / (count + 1));
 
         if (shopDao.update(shop) <= 0) {
             throw new RuntimeException("操作失败，请重试");
