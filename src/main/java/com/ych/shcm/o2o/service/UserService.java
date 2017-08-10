@@ -1,33 +1,18 @@
 package com.ych.shcm.o2o.service;
 
-import com.ych.core.model.CommonOperationResult;
-import com.ych.shcm.o2o.dao.CarDao;
-import com.ych.shcm.o2o.dao.CarModelDao;
-import com.ych.shcm.o2o.dao.UserCarDao;
-import com.ych.shcm.o2o.dao.UserDao;
-import com.ych.shcm.o2o.dao.UserThirdAuthDao;
-import com.ych.shcm.o2o.model.AccessChannel;
-import com.ych.shcm.o2o.model.Car;
-import com.ych.shcm.o2o.model.CarExpiredMaintenanceInfo;
-import com.ych.shcm.o2o.model.CarModel;
-import com.ych.shcm.o2o.model.CarUserHistory;
-import com.ych.shcm.o2o.model.Constants;
-import com.ych.shcm.o2o.model.OrderStatus;
-import com.ych.shcm.o2o.model.ThirdAuthType;
-import com.ych.shcm.o2o.model.User;
-import com.ych.shcm.o2o.model.UserAccessChannel;
-import com.ych.shcm.o2o.model.UserCar;
-import com.ych.shcm.o2o.model.UserThirdAuth;
-import com.ych.shcm.o2o.openinf.GuaranteeRequestPayload;
-import com.ych.shcm.o2o.openinf.IRequest;
-import com.ych.shcm.o2o.openinf.IResponse;
-import com.ych.shcm.o2o.openinf.RequestAction;
-import com.ych.shcm.o2o.openinf.Response;
+import java.math.BigDecimal;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
+
+import org.apache.commons.lang3.ObjectUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.MessageSource;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.TransactionStatus;
@@ -35,12 +20,11 @@ import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.Assert;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
-import java.math.BigDecimal;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
+import com.ych.core.model.CommonOperationResult;
+import com.ych.shcm.o2o.dao.*;
+import com.ych.shcm.o2o.event.OrderStatusChanged;
+import com.ych.shcm.o2o.model.*;
+import com.ych.shcm.o2o.openinf.*;
 
 /**
  * 用户的服务
@@ -66,6 +50,12 @@ public class UserService {
     private CarDao carDao;
 
     @Autowired
+    private OrderDao orderDao;
+
+    @Autowired
+    private OrderStatusHisDao orderStatusHisDao;
+
+    @Autowired
     private UserThirdAuthDao userThirdAuthDao;
 
     @Autowired
@@ -78,7 +68,7 @@ public class UserService {
     private TransactionTemplate transactionTempalte;
 
     @Autowired
-    private MessageSource messageSource;
+    private ApplicationContext context;
 
     @PostConstruct
     public void init() {
@@ -157,7 +147,7 @@ public class UserService {
 
             if (carModelDao.selectById(new BigDecimal(payload.getModelId()), false) == null) {
                 response.setResult(CommonOperationResult.NotExists.name());
-                response.setResultMsg(messageSource.getMessage("carModel.notExists", null, Locale.getDefault()));
+                response.setResultMsg(context.getMessage("carModel.notExists", null, Locale.getDefault()));
                 return response;
             }
 
@@ -186,7 +176,7 @@ public class UserService {
                                     userDao.insertAccessChannel(userAccessChannel);
                                 } else {
                                     responseIn.setResult(CommonOperationResult.Existed.name());
-                                    responseIn.setResultMsg(messageSource.getMessage("accessChannel.userPhone.bound", null, Locale.getDefault()));
+                                    responseIn.setResultMsg(context.getMessage("accessChannel.userPhone.bound", null, Locale.getDefault()));
                                     return responseIn;
                                 }
                             }
@@ -222,9 +212,12 @@ public class UserService {
                         } else {
                             if (!car.getModelId().equals(new BigDecimal(payload.getModelId()))) {
                                 responseIn.setResult(CommonOperationResult.IllegalArguments.name());
-                                responseIn.setResultMsg(messageSource.getMessage("accessChannel.vin.existed", null, Locale.getDefault()));
+                                responseIn.setResultMsg(context.getMessage("accessChannel.vin.existed", null, Locale.getDefault()));
                                 return responseIn;
                             }
+
+                            BigDecimal oldFirstOrderId;
+                            OrderStatus oldFirstOrderStatus;
 
                             if (car.getEffectTime().compareTo(payload.getEffectiveTime()) > 0) {
                                 CarExpiredMaintenanceInfo expiredMaintenanceInfo = new CarExpiredMaintenanceInfo();
@@ -233,12 +226,19 @@ public class UserService {
                                 expiredMaintenanceInfo.setCarId(car.getId());
                                 carDao.insertExpiredMaintenanceInfo(expiredMaintenanceInfo);
 
+                                oldFirstOrderId = car.getFirstOrderId();
+                                oldFirstOrderStatus = car.getFirstOrderStatus();
+
                                 car.setEffectTime(payload.getEffectiveTime());
                                 car.setExpires(payload.getExpires());
+                                car.setFirstOrderId(null);
                                 car.setFirstMaintenanceMoney(null);
                                 car.setFirstMaintenanceTime(null);
                                 car.setFirstOrderStatus(null);
                                 carDao.update(car);
+                            } else {
+                                oldFirstOrderId = car.getFirstOrderId();
+                                oldFirstOrderStatus = car.getFirstOrderStatus();
                             }
 
                             userCar = userCarDao.selectUserCarByCarId(car.getId());
@@ -246,13 +246,35 @@ public class UserService {
                             if (!userCar.getUserId().equals(userAccessChannel.getUserId())) {
                                 userCarDao.deleteUserCarById(userCar.getId());
 
-                                if(car.getFirstOrderStatus() == OrderStatus.UNPAYED) {
-                                    car.setFirstOrderStatus(null);
-                                    car.setFirstOrderId(null);
-                                    car.setFirstMaintenanceMoney(null);
-                                    car.setFirstMaintenanceTime(null);
+                                if(oldFirstOrderStatus == OrderStatus.UNPAYED || oldFirstOrderStatus == OrderStatus.PAYED) {
+                                    Order order = orderDao.selectById(oldFirstOrderId);
+                                    Order oldOrder = ObjectUtils.clone(order);
+
+                                    OrderStatus oldStatus = order.getStatus();
+                                    OrderStatus newStatus = oldStatus == OrderStatus.UNPAYED ? OrderStatus.CANCELED : OrderStatus.INVALID;
+
+                                    order.setStatus(newStatus);
+                                    order.setModifierId(BigDecimal.ZERO);
+                                    orderDao.update(order);
+
+                                    OrderStatusHis orderStatusHis = new OrderStatusHis();
+                                    orderStatusHis.setOrderId(order.getId());
+                                    orderStatusHis.setOldStatus(oldStatus);
+                                    orderStatusHis.setStatus(newStatus);
+                                    orderStatusHis.setModifierId(BigDecimal.ZERO);
+                                    orderStatusHisDao.insert(orderStatusHis);
+
+                                    context.publishEvent(new OrderStatusChanged(oldOrder, order));
+
+                                    if (car.getFirstOrderId() != null) {
+                                        car.setFirstOrderStatus(null);
+                                        car.setFirstOrderId(null);
+                                        car.setFirstMaintenanceMoney(null);
+                                        car.setFirstMaintenanceTime(null);
+                                        carDao.update(car);
+                                    }
                                 }
-                                carDao.update(car);
+
                                 UserCar newUserCar = new UserCar();
                                 newUserCar.setUserId(userAccessChannel.getUserId());
                                 newUserCar.setCarId(car.getId());
@@ -269,13 +291,13 @@ public class UserService {
                     } catch (RuntimeException e) {
                         status.setRollbackOnly();
                         logger.error("Handle access channel post maintenance info failed", e);
-                        responseIn.setResultMsg(messageSource.getMessage("system.common.operationFailed", null, Locale.getDefault()));
+                        responseIn.setResultMsg(context.getMessage("system.common.operationFailed", null, Locale.getDefault()));
                         responseIn.setResult(CommonOperationResult.Failed.name());
                         return responseIn;
                     }
 
                     responseIn.setResult(CommonOperationResult.Succeeded.name());
-                    responseIn.setResultMsg(messageSource.getMessage("system.common.success", null, Locale.getDefault()));
+                    responseIn.setResultMsg(context.getMessage("system.common.success", null, Locale.getDefault()));
                     return responseIn;
                 }
             });

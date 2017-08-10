@@ -275,6 +275,11 @@ public class AccessChannelService {
             case REFUNDED:
                 payload.setRefundTime(orderStatusHisDao.selectLatest(event.getNewEntity().getId(), OrderStatus.REFUNDED).getModifyTime());
                 break;
+
+            case INVALID:
+                payload.setRefundTime(orderStatusHisDao.selectLatest(event.getNewEntity().getId(), OrderStatus.INVALID).getModifyTime());
+                break;
+
             default:
                 return;
 
