@@ -50,13 +50,13 @@ public class ServiceItemService {
         ServiceItem old = serviceItemDao.selectById(serviceItem.getId());
         CommonOperationResultWidthData ret = new CommonOperationResultWidthData();
         try {
-            Assert.notNull(serviceItem, messageSource.getMessage("service.validate.serviceItem.required", null, Locale.getDefault()));
-            Assert.hasLength(serviceItem.getComment(), messageSource.getMessage("service.validate.serviceItem.comment.required", null, Locale.getDefault()));
-            Assert.hasLength(serviceItem.getIconPath(), messageSource.getMessage("service.validate.serviceItem.icon.required", null, Locale.getDefault()));
-            Assert.notNull(serviceItem.getBrokerage(), messageSource.getMessage("service.validate.serviceItem.brokerage.required", null, Locale.getDefault()));
-            Assert.notNull(serviceItem.getType(), messageSource.getMessage("service.validate.serviceItem.type.required", null, Locale.getDefault()));
-            Assert.notNull(serviceItem.getPrice(), messageSource.getMessage("service.validate.serviceItem.price.required", null, Locale.getDefault()));
-            Assert.hasLength(serviceItem.getName(), messageSource.getMessage("service.validate.serviceItem.name.required", null, Locale.getDefault()));
+            Assert.notNull(serviceItem, messageSource.getMessage("serviceItem.required", null, Locale.getDefault()));
+            Assert.hasLength(serviceItem.getComment(), messageSource.getMessage("serviceItem.comment.required", null, Locale.getDefault()));
+            Assert.hasLength(serviceItem.getIconPath(), messageSource.getMessage("serviceItem.icon.required", null, Locale.getDefault()));
+            Assert.notNull(serviceItem.getBrokerage(), messageSource.getMessage("serviceItem.brokerage.required", null, Locale.getDefault()));
+            Assert.notNull(serviceItem.getType(), messageSource.getMessage("serviceItem.type.required", null, Locale.getDefault()));
+            Assert.notNull(serviceItem.getPrice(), messageSource.getMessage("serviceItem.price.required", null, Locale.getDefault()));
+            Assert.hasLength(serviceItem.getName(), messageSource.getMessage("serviceItem.name.required", null, Locale.getDefault()));
         } catch (IllegalArgumentException e) {
             ret.setResult(CommonOperationResult.IllegalArguments);
             ret.setDescription(e.getMessage());
@@ -91,8 +91,8 @@ public class ServiceItemService {
 
         ServiceItem old = serviceItemDao.selectById(serviceItemId);
         try {
-            Assert.notNull(serviceItemId, messageSource.getMessage("service.validate.serviceItem.id.required", null, Locale.getDefault()));
-            Assert.notNull(status, messageSource.getMessage("service.validate.serviceItem.status.required", null, Locale.getDefault()));
+            Assert.notNull(serviceItemId, messageSource.getMessage("serviceItem.id.required", null, Locale.getDefault()));
+            Assert.notNull(status, messageSource.getMessage("serviceItem.status.required", null, Locale.getDefault()));
         } catch (IllegalArgumentException e) {
             ret.setResult(CommonOperationResult.IllegalArguments);
             ret.setDescription(e.getMessage());
@@ -119,13 +119,13 @@ public class ServiceItemService {
         CommonOperationResultWidthData ret = new CommonOperationResultWidthData();
 
         try {
-            Assert.notNull(serviceItem, messageSource.getMessage("service.validate.serviceItem.required", null, Locale.getDefault()));
-            Assert.hasLength(serviceItem.getComment(), messageSource.getMessage("service.validate.ServiceProvider.addr.required", null, Locale.getDefault()));
-            Assert.hasLength(serviceItem.getIconPath(), messageSource.getMessage("service.validate.serviceItem.icon.required", null, Locale.getDefault()));
-            Assert.notNull(serviceItem.getBrokerage(), messageSource.getMessage("service.validate.serviceItem.brokerage.required", null, Locale.getDefault()));
-            Assert.notNull(serviceItem.getType(), messageSource.getMessage("service.validate.serviceItem.type.required", null, Locale.getDefault()));
-            Assert.notNull(serviceItem.getPrice(), messageSource.getMessage("service.validate.serviceItem.price.required", null, Locale.getDefault()));
-            Assert.hasLength(serviceItem.getName(), messageSource.getMessage("service.validate.serviceItem.name.required", null, Locale.getDefault()));
+            Assert.notNull(serviceItem, messageSource.getMessage("serviceItem.required", null, Locale.getDefault()));
+            Assert.hasLength(serviceItem.getComment(), messageSource.getMessage("serviceProvider.addr.required", null, Locale.getDefault()));
+            Assert.hasLength(serviceItem.getIconPath(), messageSource.getMessage("serviceItem.icon.required", null, Locale.getDefault()));
+            Assert.notNull(serviceItem.getBrokerage(), messageSource.getMessage("serviceItem.brokerage.required", null, Locale.getDefault()));
+            Assert.notNull(serviceItem.getType(), messageSource.getMessage("serviceItem.type.required", null, Locale.getDefault()));
+            Assert.notNull(serviceItem.getPrice(), messageSource.getMessage("serviceItem.price.required", null, Locale.getDefault()));
+            Assert.hasLength(serviceItem.getName(), messageSource.getMessage("serviceItem.name.required", null, Locale.getDefault()));
         } catch (IllegalArgumentException e) {
             ret.setResult(CommonOperationResult.IllegalArguments);
             ret.setDescription(e.getMessage());

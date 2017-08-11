@@ -63,10 +63,10 @@ public class ServicePackService {
         ServicePack old = servicePackDao.selectById(servicePack.getId());
         CommonOperationResultWidthData ret = new CommonOperationResultWidthData();
         try {
-            Assert.notNull(servicePack, messageSource.getMessage("service.validate.servicePack.required", null, Locale.getDefault()));
-            Assert.notNull(servicePack.getComment(), messageSource.getMessage("service.validate.servicePack.comment.required", null, Locale.getDefault()));
-            Assert.notNull(servicePack.getIconPath(), messageSource.getMessage("service.validate.servicePack.icon.required", null, Locale.getDefault()));
-            Assert.notNull(servicePack.getName(), messageSource.getMessage("service.validate.servicePack.name.required", null, Locale.getDefault()));
+            Assert.notNull(servicePack, messageSource.getMessage("servicePack.required", null, Locale.getDefault()));
+            Assert.notNull(servicePack.getComment(), messageSource.getMessage("servicePack.comment.required", null, Locale.getDefault()));
+            Assert.notNull(servicePack.getIconPath(), messageSource.getMessage("servicePack.icon.required", null, Locale.getDefault()));
+            Assert.notNull(servicePack.getName(), messageSource.getMessage("servicePack.name.required", null, Locale.getDefault()));
         } catch (IllegalArgumentException e) {
             ret.setResult(CommonOperationResult.IllegalArguments);
             ret.setDescription(e.getMessage());
@@ -98,8 +98,8 @@ public class ServicePackService {
 
         ServicePack old = servicePackDao.selectById(servicePackId);
         try {
-            Assert.notNull(servicePackId, messageSource.getMessage("service.validate.servicePack.id.required", null, Locale.getDefault()));
-            Assert.notNull(status, messageSource.getMessage("service.validate.servicePack.status.required", null, Locale.getDefault()));
+            Assert.notNull(servicePackId, messageSource.getMessage("servicePack.id.required", null, Locale.getDefault()));
+            Assert.notNull(status, messageSource.getMessage("servicePack.status.required", null, Locale.getDefault()));
         } catch (IllegalArgumentException e) {
             ret.setResult(CommonOperationResult.IllegalArguments);
             ret.setDescription(e.getMessage());
@@ -126,10 +126,10 @@ public class ServicePackService {
         CommonOperationResultWidthData ret = new CommonOperationResultWidthData();
 
         try {
-            Assert.notNull(servicePack, messageSource.getMessage("service.validate.servicePack.required", null, Locale.getDefault()));
-            Assert.notNull(servicePack.getComment(), messageSource.getMessage("service.validate.servicePack.comment.required", null, Locale.getDefault()));
-            Assert.notNull(servicePack.getIconPath(), messageSource.getMessage("service.validate.servicePack.icon.required", null, Locale.getDefault()));
-            Assert.notNull(servicePack.getName(), messageSource.getMessage("service.validate.servicePack.name.required", null, Locale.getDefault()));
+            Assert.notNull(servicePack, messageSource.getMessage("servicePack.required", null, Locale.getDefault()));
+            Assert.notNull(servicePack.getComment(), messageSource.getMessage("servicePack.comment.required", null, Locale.getDefault()));
+            Assert.notNull(servicePack.getIconPath(), messageSource.getMessage("servicePack.icon.required", null, Locale.getDefault()));
+            Assert.notNull(servicePack.getName(), messageSource.getMessage("servicePack.name.required", null, Locale.getDefault()));
         } catch (IllegalArgumentException e) {
             ret.setResult(CommonOperationResult.IllegalArguments);
             ret.setDescription(e.getMessage());

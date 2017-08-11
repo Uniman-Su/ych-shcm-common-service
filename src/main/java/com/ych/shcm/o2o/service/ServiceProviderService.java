@@ -86,10 +86,10 @@ public class ServiceProviderService {
      */
     private boolean checkServiceProviderInfo(ServiceProvider serviceProvider, CommonOperationResultWidthData ret) {
         try {
-            Assert.notNull(serviceProvider, messageSource.getMessage("service.validate.servicePack.required", null, Locale.getDefault()));
+            Assert.notNull(serviceProvider, messageSource.getMessage("servicePack.required", null, Locale.getDefault()));
             Assert.notNull(serviceProvider.getAddress(), messageSource.getMessage("service.validate.servicePack.addr.required", null, Locale.getDefault()));
-            Assert.notNull(serviceProvider.getName(), messageSource.getMessage("service.validate.servicePack.name.required", null, Locale.getDefault()));
-            Assert.notNull(serviceProvider.getAreaId(), messageSource.getMessage("service.validate.ServiceProvider.area.required", null, Locale.getDefault()));
+            Assert.notNull(serviceProvider.getName(), messageSource.getMessage("servicePack.name.required", null, Locale.getDefault()));
+            Assert.notNull(serviceProvider.getAreaId(), messageSource.getMessage("serviceProvider.area.required", null, Locale.getDefault()));
         } catch (IllegalArgumentException e) {
             ret.setResult(CommonOperationResult.IllegalArguments);
             ret.setDescription(e.getMessage());
@@ -132,8 +132,8 @@ public class ServiceProviderService {
      */
 
     public CommonOperationResultWidthData insertBusinessArea(BigDecimal serviceProviderId, Set<String> businessAreas) {
-        Assert.notNull(serviceProviderId, messageSource.getMessage("service.validate.ServiceProvider.id.required", null, Locale.getDefault()));
-        Assert.notEmpty(businessAreas, messageSource.getMessage("service.validate.ServiceProvider.businessAreas.required", null, Locale.getDefault()));
+        Assert.notNull(serviceProviderId, messageSource.getMessage("serviceProvider.id.required", null, Locale.getDefault()));
+        Assert.notEmpty(businessAreas, messageSource.getMessage("businessAreas.required", null, Locale.getDefault()));
         List<ServiceProviderBusinessArea> list = new ArrayList<>();
         for (String areaId : businessAreas) {
             ServiceProviderBusinessArea area = new ServiceProviderBusinessArea();
@@ -162,7 +162,7 @@ public class ServiceProviderService {
 
     public CommonOperationResultWidthData modifyBusinessArea(BigDecimal serviceProviderId, Set<String> newBusinessAreas) {
         CommonOperationResultWidthData ret = new CommonOperationResultWidthData();
-        Assert.notNull(serviceProviderId, messageSource.getMessage("service.validate.ServiceProvider.id.required", null, Locale.getDefault()));
+        Assert.notNull(serviceProviderId, messageSource.getMessage("serviceProvider.id.required", null, Locale.getDefault()));
         serviceProviderDao.deleteBusinessArea(serviceProviderId);
         if (CollectionUtils.isEmpty(newBusinessAreas)) {
             return ret;
