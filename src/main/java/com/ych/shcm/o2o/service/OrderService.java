@@ -1,58 +1,12 @@
 package com.ych.shcm.o2o.service;
 
-import com.ych.core.model.CommonOperationResult;
-import com.ych.core.model.CommonOperationResultWidthData;
-import com.ych.core.model.PagedList;
-import com.ych.core.model.SystemParameterHolder;
-import com.ych.shcm.o2o.dao.CarDao;
-import com.ych.shcm.o2o.dao.CarModelDao;
-import com.ych.shcm.o2o.dao.OrderAppointmentDao;
-import com.ych.shcm.o2o.dao.OrderBillDao;
-import com.ych.shcm.o2o.dao.OrderDao;
-import com.ych.shcm.o2o.dao.OrderEvaluationDao;
-import com.ych.shcm.o2o.dao.OrderServicePackDao;
-import com.ych.shcm.o2o.dao.OrderServicePackItemDao;
-import com.ych.shcm.o2o.dao.OrderStatusHisDao;
-import com.ych.shcm.o2o.dao.PayOrderDao;
-import com.ych.shcm.o2o.dao.ServiceItemDao;
-import com.ych.shcm.o2o.dao.ServiceProviderDao;
-import com.ych.shcm.o2o.dao.ServiceProviderSettleDao;
-import com.ych.shcm.o2o.dao.ShopDao;
-import com.ych.shcm.o2o.dao.ShopSettleDao;
-import com.ych.shcm.o2o.dao.UserCarDao;
-import com.ych.shcm.o2o.event.OrderStatusChanged;
-import com.ych.shcm.o2o.model.Car;
-import com.ych.shcm.o2o.model.CarModel;
-import com.ych.shcm.o2o.model.Constants;
-import com.ych.shcm.o2o.model.Order;
-import com.ych.shcm.o2o.model.OrderAppointment;
-import com.ych.shcm.o2o.model.OrderBill;
-import com.ych.shcm.o2o.model.OrderEvaluation;
-import com.ych.shcm.o2o.model.OrderServicePack;
-import com.ych.shcm.o2o.model.OrderServicePackItem;
-import com.ych.shcm.o2o.model.OrderStatus;
-import com.ych.shcm.o2o.model.OrderStatusCount;
-import com.ych.shcm.o2o.model.OrderStatusHis;
-import com.ych.shcm.o2o.model.PayOrder;
-import com.ych.shcm.o2o.model.ServiceItem;
-import com.ych.shcm.o2o.model.ServiceItemType;
-import com.ych.shcm.o2o.model.ServicePack;
-import com.ych.shcm.o2o.model.ServiceProvider;
-import com.ych.shcm.o2o.model.ServiceProviderSettleDate;
-import com.ych.shcm.o2o.model.ServiceProviderSettleDateSummary;
-import com.ych.shcm.o2o.model.ServiceProviderSettleDetail;
-import com.ych.shcm.o2o.model.ServiceProviderSettleStatus;
-import com.ych.shcm.o2o.model.Shop;
-import com.ych.shcm.o2o.model.ShopSettleDate;
-import com.ych.shcm.o2o.model.ShopSettleDateSummary;
-import com.ych.shcm.o2o.model.ShopSettleDetail;
-import com.ych.shcm.o2o.model.ShopSettleStatus;
-import com.ych.shcm.o2o.model.UserCar;
-import com.ych.shcm.o2o.parameter.QueryOrderAppointmentListParameter;
-import com.ych.shcm.o2o.parameter.QueryOrderListParameter;
-import com.ych.shcm.o2o.service.systemparamholder.ServiceProviderIncomesRate;
-import com.ych.shcm.o2o.service.systemparamholder.ServiceProviderSettleDelay;
-import com.ych.shcm.o2o.service.systemparamholder.ShopSettleDelay;
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import javax.annotation.Resource;
+
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateFormatUtils;
@@ -61,22 +15,23 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 
-import javax.annotation.Resource;
-import java.math.BigDecimal;
-import java.math.MathContext;
-import java.math.RoundingMode;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
+import com.ych.core.model.CommonOperationResult;
+import com.ych.core.model.CommonOperationResultWidthData;
+import com.ych.core.model.PagedList;
+import com.ych.core.model.SystemParameterHolder;
+import com.ych.shcm.o2o.dao.*;
+import com.ych.shcm.o2o.event.OrderStatusChanged;
+import com.ych.shcm.o2o.model.*;
+import com.ych.shcm.o2o.parameter.QueryOrderAppointmentListParameter;
+import com.ych.shcm.o2o.parameter.QueryOrderListParameter;
+import com.ych.shcm.o2o.service.systemparamholder.ServiceProviderIncomesRate;
+import com.ych.shcm.o2o.service.systemparamholder.ServiceProviderSettleDelay;
+import com.ych.shcm.o2o.service.systemparamholder.ShopSettleDelay;
 
 /**
  * 订单服务
@@ -318,15 +273,14 @@ public class OrderService {
         OrderStatus oldStatus = old.getStatus();
         if (oldStatus == OrderStatus.UNPAYED) {
             old.setStatus(OrderStatus.CANCELED);
-
             orderDao.update(old);
+
             OrderStatusHis orderStatusHis = new OrderStatusHis();
             orderStatusHis.setOrderId(old.getId());
             orderStatusHis.setOldStatus(oldStatus);
             orderStatusHis.setStatus(OrderStatus.CANCELED);
             orderStatusHis.setModifierId(old.getModifierId());
             orderStatusHisDao.insert(orderStatusHis);
-            firstMaintenaceChangeCarInfo(old);
         } else {
             ret.setResult(CommonOperationResult.Failed);
             return ret;
@@ -358,13 +312,13 @@ public class OrderService {
         if (oldStatus == OrderStatus.SERVICED) {
             old.setStatus(OrderStatus.CONFIRMED);
             orderDao.update(old);
+
             OrderStatusHis orderStatusHis = new OrderStatusHis();
             orderStatusHis.setOrderId(old.getId());
             orderStatusHis.setOldStatus(oldStatus);
             orderStatusHis.setStatus(OrderStatus.CONFIRMED);
             orderStatusHis.setModifierId(old.getModifierId());
             orderStatusHisDao.insert(orderStatusHis);
-            firstMaintenaceChangeCarInfo(old);
         } else {
             ret.setResult(CommonOperationResult.Failed);
             return ret;
@@ -412,7 +366,6 @@ public class OrderService {
             orderStatusHis.setModifierId(old.getModifierId());
             orderStatusHisDao.insert(orderStatusHis);
             addSettleMoney(old);
-            firstMaintenaceChangeCarInfo(old);
             ret.setResult(CommonOperationResult.Succeeded);
         } else {
             ret.setResult(CommonOperationResult.Failed);
@@ -549,7 +502,6 @@ public class OrderService {
             if (orderStatusHisDao.insert(orderStatusHis) <= 0) {
                 throw new RuntimeException(messageSource.getMessage("system.common.operationFailed", null, Locale.getDefault()));
             }
-            firstMaintenaceChangeCarInfo(old);
         } else {
             ret.setResult(CommonOperationResult.IllegalOperation);
             ret.setDescription(messageSource.getMessage("order.statusChange", null, Locale.getDefault()));
@@ -839,27 +791,35 @@ public class OrderService {
         return orderEvaluationDao.selectOrderEvaluationList(parameter);
     }
 
-    /**
-     * 首保后改变车辆信息
-     *
-     * @param order
-     */
-    private void firstMaintenaceChangeCarInfo(Order order) {
+    @EventListener(condition = "#event.original == true")
+    public void onStatusChanged(OrderStatusChanged event) {
+        Order order = event.getNewEntity();
         Car car = carDao.selectById(order.getCarId());
-        if (order.getId().compareTo(car.getFirstOrderId()) == 0) {
-            if (order.getStatus() == OrderStatus.CANCELED || order.getStatus() == OrderStatus.REFUNDED || order.getStatus() == OrderStatus.REFUNDED_OFF_LINE) {
-                car.setFirstOrderId(null);
-                car.setFirstMaintenanceTime(null);
-                car.setFirstMaintenanceMoney(null);
-                car.setFirstOrderStatus(null);
-            } else {
-                car.setFirstOrderStatus(order.getStatus());
+
+        if (car.getFirstOrderId().equals(order.getId())) {
+            switch(order.getStatus()) {
+                case CANCELED:
+                case REFUNDED:
+                case REFUNDED_OFF_LINE:
+                case INVALID:
+                    car.setFirstOrderId(null);
+                    car.setFirstMaintenanceTime(null);
+                    car.setFirstMaintenanceMoney(null);
+                    car.setFirstOrderStatus(null);
+                    break;
+
+                case SERVICED:
+                    car.setFirstOrderStatus(OrderStatus.SERVICED);
+                    car.setFirstMaintenanceTime(orderStatusHisDao.selectLatest(order.getId(), OrderStatus.SERVICED).getModifyTime());
+                    break;
+
+                default:
+                    car.setFirstOrderStatus(order.getStatus());
             }
-            if(order.getStatus() == OrderStatus.SERVICED){
-                car.setFirstMaintenanceTime(new Date());
-            }
+
             carDao.update(car);
         }
+
     }
 
 }

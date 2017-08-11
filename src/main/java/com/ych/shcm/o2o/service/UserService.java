@@ -1,33 +1,12 @@
 package com.ych.shcm.o2o.service;
 
-import com.ych.core.model.CommonOperationResult;
-import com.ych.shcm.o2o.dao.CarDao;
-import com.ych.shcm.o2o.dao.CarModelDao;
-import com.ych.shcm.o2o.dao.OrderDao;
-import com.ych.shcm.o2o.dao.OrderStatusHisDao;
-import com.ych.shcm.o2o.dao.UserCarDao;
-import com.ych.shcm.o2o.dao.UserDao;
-import com.ych.shcm.o2o.dao.UserThirdAuthDao;
-import com.ych.shcm.o2o.event.OrderStatusChanged;
-import com.ych.shcm.o2o.model.AccessChannel;
-import com.ych.shcm.o2o.model.Car;
-import com.ych.shcm.o2o.model.CarExpiredMaintenanceInfo;
-import com.ych.shcm.o2o.model.CarModel;
-import com.ych.shcm.o2o.model.CarUserHistory;
-import com.ych.shcm.o2o.model.Constants;
-import com.ych.shcm.o2o.model.Order;
-import com.ych.shcm.o2o.model.OrderStatus;
-import com.ych.shcm.o2o.model.OrderStatusHis;
-import com.ych.shcm.o2o.model.ThirdAuthType;
-import com.ych.shcm.o2o.model.User;
-import com.ych.shcm.o2o.model.UserAccessChannel;
-import com.ych.shcm.o2o.model.UserCar;
-import com.ych.shcm.o2o.model.UserThirdAuth;
-import com.ych.shcm.o2o.openinf.GuaranteeRequestPayload;
-import com.ych.shcm.o2o.openinf.IRequest;
-import com.ych.shcm.o2o.openinf.IResponse;
-import com.ych.shcm.o2o.openinf.RequestAction;
-import com.ych.shcm.o2o.openinf.Response;
+import java.math.BigDecimal;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
+
 import org.apache.commons.lang3.ObjectUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,12 +21,11 @@ import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.Assert;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
-import java.math.BigDecimal;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
+import com.ych.core.model.CommonOperationResult;
+import com.ych.shcm.o2o.dao.*;
+import com.ych.shcm.o2o.event.OrderStatusChanged;
+import com.ych.shcm.o2o.model.*;
+import com.ych.shcm.o2o.openinf.*;
 
 /**
  * 用户的服务
@@ -290,14 +268,6 @@ public class UserService {
                                     orderStatusHisDao.insert(orderStatusHis);
 
                                     context.publishEvent(new OrderStatusChanged(oldOrder, order));
-
-                                    if (car.getFirstOrderId() != null) {
-                                        car.setFirstOrderStatus(null);
-                                        car.setFirstOrderId(null);
-                                        car.setFirstMaintenanceMoney(null);
-                                        car.setFirstMaintenanceTime(null);
-                                        carDao.update(car);
-                                    }
                                 }
 
                                 UserCar newUserCar = new UserCar();

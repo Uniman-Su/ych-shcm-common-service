@@ -95,8 +95,6 @@ public class PayOrderService {
 
     @Autowired
     private ApplicationContext context;
-    @Autowired
-    private CarDao carDao;
 
     /**
      * @return 生成新的流水号
@@ -173,7 +171,7 @@ public class PayOrderService {
             PayOrderOrder payOrderOrder = new PayOrderOrder();
             payOrderOrder.setOrderId(order.getId());
 
-            orderFee = order.getMoney().divide(payOrder.getPrice()).multiply(totalFee, new MathContext(2));
+            orderFee = order.getMoney().multiply(totalFee).divide(payOrder.getPrice(), new MathContext(2));
             payOrderOrder.setChannelFee(orderFee);
 
             restFee = restFee.subtract(orderFee);
@@ -311,7 +309,7 @@ public class PayOrderService {
                         order.setStatus(OrderStatus.REFUNDED);
                         order.setModifierId(BigDecimal.ZERO);
                         orderDao.update(order);
-                        firstMaintenaceChangeCarInfo(order);
+
                         OrderStatusHis orderStatusHis = new OrderStatusHis();
                         orderStatusHis.setOrderId(order.getId());
                         orderStatusHis.setOldStatus(oldOrder.getStatus());
@@ -384,7 +382,7 @@ public class PayOrderService {
                 order.setStatus(OrderStatus.PAYED);
                 order.setModifierId(BigDecimal.ZERO);
                 orderDao.update(order);
-                firstMaintenaceChangeCarInfo(order);
+
                 OrderStatusHis orderStatusHis = new OrderStatusHis();
                 orderStatusHis.setOrderId(order.getId());
                 orderStatusHis.setOldStatus(oldOrder.getStatus());
@@ -411,26 +409,4 @@ public class PayOrderService {
         return payOrderDao.selectPayedByOrderId(orderId);
     }
 
-    /**
-     * 首保后改变车辆信息
-     *
-     * @param order
-     */
-    private void firstMaintenaceChangeCarInfo(Order order) {
-        Car car = carDao.selectById(order.getCarId());
-        if (order.getId().compareTo(car.getFirstOrderId()) == 0) {
-            if (order.getStatus() == OrderStatus.CANCELED || order.getStatus() == OrderStatus.REFUNDED || order.getStatus() == OrderStatus.REFUNDED_OFF_LINE) {
-                car.setFirstOrderId(null);
-                car.setFirstMaintenanceTime(null);
-                car.setFirstMaintenanceMoney(null);
-                car.setFirstOrderStatus(null);
-            } else {
-                car.setFirstOrderStatus(order.getStatus());
-            }
-            if (order.getStatus() == OrderStatus.SERVICED) {
-                car.setFirstMaintenanceTime(new Date());
-            }
-            carDao.update(car);
-        }
-    }
 }
