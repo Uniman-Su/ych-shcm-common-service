@@ -59,6 +59,7 @@ import org.apache.commons.lang3.time.DateFormatUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -73,6 +74,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -147,6 +149,9 @@ public class OrderService {
     @Autowired
     private ServiceProviderDao serviceProviderDao;
     @Autowired
+    private MessageSource messageSource;
+
+    @Autowired
     private UserCarDao userCarDao;
 
     /**
@@ -191,16 +196,11 @@ public class OrderService {
         List<ServicePack> servicePacks = carService.getServicePackOfCar(car.getModelId());
 
         try {
-            Assert.notNull(userCar, "车辆已不属于当前用户,订单创建失败");
-            Assert.notNull(order.getCarId(), "车辆id不能为空");
-            Assert.notNull(car, "车辆信息不存在");
-            //Assert.notNull(order.getAccessChannelId(), "渠道id不能为空");
-            //Assert.notNull(order.getServiceProviderId(), "车辆id不能为空");
-            //Assert.notNull(order.getShopId(), "门店id不能为空");
-            Assert.notNull(order.getUserId(), "用户id不能为空");
-            //Assert.notNull(order.getMoney(), "金额不能为空");
-            Assert.notEmpty(order.getOrderServicePacks(), "订单服务包不能为空");
-            Assert.notEmpty(servicePacks, "车型无可用服务");
+            Assert.notNull(order.getCarId(), messageSource.getMessage("order.validate.carId.required", null, Locale.getDefault()));
+            Assert.notEmpty(order.getOrderServicePacks(), messageSource.getMessage("order.validate.packs.required", null, Locale.getDefault()));
+            Assert.notNull(car, messageSource.getMessage("order.validate.car.notExists", null, Locale.getDefault()));
+            Assert.notNull(order.getUserId(), messageSource.getMessage("order.validate.userId.required", null, Locale.getDefault()));
+            Assert.notEmpty(servicePacks, messageSource.getMessage("order.validate.carModel.no.service.use", null, Locale.getDefault()));
         } catch (IllegalArgumentException e) {
             ret.setResult(CommonOperationResult.IllegalArguments);
             ret.setDescription(e.getMessage());
@@ -212,7 +212,7 @@ public class OrderService {
         } else {
             if (car.getFirstOrderStatus() == OrderStatus.UNPAYED || car.getFirstOrderStatus() == OrderStatus.PAYED) {
                 ret.setResult(CommonOperationResult.IllegalOperation);
-                ret.setDescription("首保订单未完成时无法创建新订单,请查看订单列表");
+                ret.setDescription(messageSource.getMessage("order.validate.firstMaintenance.notDone", null, Locale.getDefault()));
                 return ret;
             }
         }
@@ -226,7 +226,7 @@ public class OrderService {
             if (isFirstMaintenance) {
                 if (pack.getServicePackId().compareTo(servicePacks.get(0).getId()) != 0) {
                     ret.setResult(CommonOperationResult.IllegalArguments);
-                    ret.setDescription("未进行第一次保养车辆只能选择首保服务");
+                    ret.setDescription(messageSource.getMessage("order.validate.only.can.choose.firstMaintenance", null, Locale.getDefault()));
                     return ret;
                 }
                 servicePack = servicePacks.get(0);
@@ -239,7 +239,7 @@ public class OrderService {
             }
             if (servicePack == null) {
                 ret.setResult(CommonOperationResult.IllegalArguments);
-                ret.setDescription("服务包不存在");
+                ret.setDescription(messageSource.getMessage("order.validate.packs.notExists", null, Locale.getDefault()));
                 return ret;
             }
             OrderServicePack orderServicePack = new OrderServicePack();
@@ -312,7 +312,7 @@ public class OrderService {
         Order oldEventEntity = ObjectUtils.clone(old);
         if (old == null) {
             ret.setResult(CommonOperationResult.NotExists);
-            ret.setDescription("订单不存在");
+            ret.setDescription(messageSource.getMessage("order.validate.order.notExists", null, Locale.getDefault()));
             return ret;
         }
         OrderStatus oldStatus = old.getStatus();
@@ -350,7 +350,7 @@ public class OrderService {
         Order oldEventEntity = ObjectUtils.clone(old);
         if (old == null) {
             ret.setResult(CommonOperationResult.NotExists);
-            ret.setDescription("订单不存在");
+            ret.setDescription(messageSource.getMessage("order.validate.order.notExists", null, Locale.getDefault()));
             return ret;
         }
         OrderStatus oldStatus = old.getStatus();
@@ -389,7 +389,7 @@ public class OrderService {
         Order oldEventEntity = ObjectUtils.clone(old);
         if (old == null) {
             ret.setResult(CommonOperationResult.NotExists);
-            ret.setDescription("订单不存在");
+            ret.setDescription(messageSource.getMessage("order.validate.order.notExists", null, Locale.getDefault()));
             return ret;
         }
         OrderStatus oldStatus = old.getStatus();
@@ -401,7 +401,7 @@ public class OrderService {
             old.setMileage(mileage);
             if (orderDao.update(old) <= 0) {
                 ret.setResult(CommonOperationResult.Failed);
-                ret.setDescription("订单状态已改变");
+                ret.setDescription(messageSource.getMessage("order.validate.order.statusChange", null, Locale.getDefault()));
             }
             OrderStatusHis orderStatusHis = new OrderStatusHis();
             orderStatusHis.setOrderId(old.getId());
@@ -413,7 +413,7 @@ public class OrderService {
             ret.setResult(CommonOperationResult.Succeeded);
         } else {
             ret.setResult(CommonOperationResult.Failed);
-            ret.setDescription("必须是已支付订单才能进行服务操作");
+            ret.setDescription(messageSource.getMessage("order.validate.order.onlyPayedCanService", null, Locale.getDefault()));
             return ret;
 
         }
@@ -454,12 +454,12 @@ public class OrderService {
         CommonOperationResultWidthData ret = new CommonOperationResultWidthData();
 
         try {
-            Assert.notNull(orderAppointment, "预约实体不能为空");
-            Assert.notNull(orderAppointment.getOrderId(), "预约订单Id不能为空");
-            Assert.notNull(orderAppointment.getAppointedTime(), "预约时间不能为空");
-            Assert.hasLength(orderAppointment.getPhone(), "联系电话不能为空");
-            Assert.notNull(orderAppointment.getShopId(), "门店id不能为空");
-            Assert.hasLength(orderAppointment.getPtc(), "联系人不能为空");
+            Assert.notNull(orderAppointment, messageSource.getMessage("order.validate.orderAppointment.appointedTime.required", null, Locale.getDefault()));
+            Assert.notNull(orderAppointment.getOrderId(), messageSource.getMessage("order.validate.orderId.required", null, Locale.getDefault()));
+            Assert.notNull(orderAppointment.getAppointedTime(), messageSource.getMessage("order.validate.orderAppointment.required", null, Locale.getDefault()));
+            Assert.hasLength(orderAppointment.getPhone(), messageSource.getMessage("order.validate.orderAppointment.phone.required", null, Locale.getDefault()));
+            Assert.notNull(orderAppointment.getShopId(), messageSource.getMessage("order.validate.orderAppointment.shopId.required", null, Locale.getDefault()));
+            Assert.hasLength(orderAppointment.getPtc(), messageSource.getMessage("order.validate.orderAppointment.ptc.required", null, Locale.getDefault()));
         } catch (IllegalArgumentException e) {
             ret.setResult(CommonOperationResult.IllegalArguments);
             ret.setDescription(e.getMessage());
@@ -508,12 +508,13 @@ public class OrderService {
         CommonOperationResultWidthData ret = new CommonOperationResultWidthData<>();
 
         try {
-            Assert.notNull(orderEvaluation, "评价不能为空");
-            Assert.notNull(orderEvaluation.getOrderId(), "订单id不能为空");
-            Assert.notNull(orderEvaluation.getSkill(), "技术能力评价不能为空");
-            Assert.notNull(orderEvaluation.getAttitude(), "服务态度不能为空");
-            Assert.notNull(orderEvaluation.getEfficiency(), "服务效率不能为空");
-            Assert.notNull(orderEvaluation.getEnvironment(), "店面环境不能为空");
+            Assert.notNull(orderEvaluation, messageSource.getMessage("order.validate.orderEvaluation.required", null, Locale.getDefault()));
+            Assert.notNull(orderEvaluation.getOrderId(), messageSource.getMessage("order.validate.orderId.required", null, Locale.getDefault()));
+            Assert.notNull(orderEvaluation.getSkill(), messageSource.getMessage("order.validate.orderEvaluation.skill.required", null, Locale.getDefault()));
+            Assert.notNull(orderEvaluation.getAttitude(), messageSource.getMessage("order.validate.orderEvaluation.attitude.required", null, Locale.getDefault()));
+            Assert.notNull(orderEvaluation.getEfficiency(), messageSource.getMessage("order.validate.orderEvaluation.efficiency.required", null, Locale.getDefault()));
+            Assert.notNull(orderEvaluation.getEnvironment(), messageSource.getMessage("order.validate.orderEvaluation.environment.required", null, Locale.getDefault()));
+            Assert.notNull(orderEvaluation.getOverallEvaluation(), messageSource.getMessage("order.validate.orderEvaluation.overallEvaluation.required", null, Locale.getDefault()));
 
         } catch (IllegalArgumentException e) {
             ret.setResult(CommonOperationResult.IllegalArguments);
@@ -523,7 +524,7 @@ public class OrderService {
         Order old = orderDao.selectById(orderEvaluation.getOrderId());
         if (old == null) {
             ret.setResult(CommonOperationResult.NotExists);
-            ret.setDescription("订单不存在");
+            ret.setDescription(messageSource.getMessage("order.validate.order.notExists", null, Locale.getDefault()));
             return ret;
         }
         Order oldEventEntity = ObjectUtils.clone(old);
@@ -534,7 +535,7 @@ public class OrderService {
 
             if (orderDao.update(old) <= 0) {
                 ret.setResult(CommonOperationResult.Failed);
-                ret.setDescription("操作失败，请重试");
+                ret.setDescription(messageSource.getMessage("system.common.operationFailed", null, Locale.getDefault()));
                 return ret;
             }
             OrderStatusHis orderStatusHis = new OrderStatusHis();
@@ -543,15 +544,15 @@ public class OrderService {
             orderStatusHis.setStatus(OrderStatus.EVALUATED);
             orderStatusHis.setModifierId(old.getModifierId());
             if (orderStatusHisDao.insert(orderStatusHis) <= 0) {
-                throw new RuntimeException("操作失败，请重试");
+                throw new RuntimeException(messageSource.getMessage("system.common.operationFailed", null, Locale.getDefault()));
             }
         } else {
             ret.setResult(CommonOperationResult.IllegalOperation);
-            ret.setDescription("订单不为待评价状态");
+            ret.setDescription(messageSource.getMessage("order.validate.order.statusChange", null, Locale.getDefault()));
             return ret;
         }
         if (orderEvaluationDao.insert(orderEvaluation) < 0) {
-            throw new RuntimeException("操作失败，请重试");
+            throw new RuntimeException(messageSource.getMessage("system.common.operationFailed", null, Locale.getDefault()));
         }
 
         Order order = orderDao.selectById(orderEvaluation.getOrderId());
@@ -561,7 +562,7 @@ public class OrderService {
         shop.setAverageScore((shop.getAverageScore() * count + orderEvaluation.getAverage().doubleValue()) / (count + 1));
 
         if (shopDao.update(shop) <= 0) {
-            throw new RuntimeException("操作失败，请重试");
+            throw new RuntimeException(messageSource.getMessage("system.common.operationFailed", null, Locale.getDefault()));
         }
         ret.setResult(CommonOperationResult.Succeeded);
 
@@ -791,17 +792,17 @@ public class OrderService {
     public CommonOperationResultWidthData addOrderBill(OrderBill orderBill) {
         CommonOperationResultWidthData ret = new CommonOperationResultWidthData();
         try {
-            Assert.notNull(orderBill, "开票申请不能为空");
-            Assert.notNull(orderBill.getOrderId(), "订单id不能为空");
-            Assert.hasLength(orderBill.getBank(), "开户银行不能为空");
-            Assert.hasLength(orderBill.getBankAccount(), "银行账户不能为空");
-            Assert.hasLength(orderBill.getCompany(), "公司名不能为空");
-            Assert.hasLength(orderBill.getCompanyAddr(), "注册地址不能为空");
-            //Assert.hasLength(orderBill.getCompanyPhone(), "公司电话不能为空");
-            Assert.hasLength(orderBill.getDeliverAddr(), "配送地址不能为空");
-            Assert.hasLength(orderBill.getTaxNo(), "纳税人识别代码不能为空");
-            Assert.hasLength(orderBill.getPtc(), "联系人不能为空");
-            Assert.hasLength(orderBill.getPhone(), "联系电话不能为空");
+            Assert.notNull(orderBill, messageSource.getMessage("order.validate.orderBill.required", null, Locale.getDefault()));
+            Assert.notNull(orderBill.getOrderId(), messageSource.getMessage("order.validate.orderId.required", null, Locale.getDefault()));
+            Assert.hasLength(orderBill.getBank(), messageSource.getMessage("order.validate.bank.required", null, Locale.getDefault()));
+            Assert.hasLength(orderBill.getBankAccount(), messageSource.getMessage("order.validate.bankAccount.required", null, Locale.getDefault()));
+            Assert.hasLength(orderBill.getCompany(), messageSource.getMessage("order.validate.companyName.required", null, Locale.getDefault()));
+            Assert.hasLength(orderBill.getCompanyAddr(), messageSource.getMessage("order.validate.companyAddr.required", null, Locale.getDefault()));
+            Assert.hasLength(orderBill.getDeliverAddr(), messageSource.getMessage("order.validate.deliverAddr.required", null, Locale.getDefault()));
+            Assert.hasLength(orderBill.getTaxNo(), messageSource.getMessage("order.validate.taxNo.required", null, Locale.getDefault()));
+            Assert.hasLength(orderBill.getPtc(), messageSource.getMessage("order.validate.ptc.required", null, Locale.getDefault()));
+            Assert.hasLength(orderBill.getPhone(), messageSource.getMessage("order.validate.phone.required", null, Locale.getDefault()));
+
         } catch (IllegalArgumentException e) {
             ret.setResult(CommonOperationResult.IllegalArguments);
             ret.setDescription(e.getMessage());
@@ -810,12 +811,12 @@ public class OrderService {
         OrderBill orderBill1 = orderBillDao.selectByOrderId(orderBill.getOrderId());
         if (orderBill1 != null) {
             ret.setResult(CommonOperationResult.Failed);
-            ret.setDescription("订单已申请开票");
+            ret.setDescription(messageSource.getMessage("order.validate.orderBill.already.exists", null, Locale.getDefault()));
             return ret;
         }
         if (orderBillDao.insert(orderBill) <= 0) {
             ret.setResult(CommonOperationResult.Failed);
-            ret.setDescription("操作失败，请重试");
+            ret.setDescription(messageSource.getMessage("system.common.operationFailed", null, Locale.getDefault()));
             return ret;
         } else {
             ret.setResult(CommonOperationResult.Succeeded);
