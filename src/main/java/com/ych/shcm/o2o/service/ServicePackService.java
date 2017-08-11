@@ -14,12 +14,14 @@ import com.ych.shcm.o2o.model.ServicePack;
 import com.ych.shcm.o2o.model.ServiceStatus;
 import com.ych.shcm.o2o.parameter.QueryServicePackListParameter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -36,6 +38,8 @@ public class ServicePackService {
     private ServicePackItemDao servicePackItemDao;
     @Autowired
     private CarModelDao carModelDao;
+    @Autowired
+    private MessageSource messageSource;
 
     /**
      * 根据ID取得服务包详情
@@ -59,10 +63,10 @@ public class ServicePackService {
         ServicePack old = servicePackDao.selectById(servicePack.getId());
         CommonOperationResultWidthData ret = new CommonOperationResultWidthData();
         try {
-            Assert.notNull(servicePack, "服务包不能为空");
-            Assert.notNull(servicePack.getComment(), "服务包备注不能为空");
-            Assert.notNull(servicePack.getIconPath(), "服务包图标不能为空");
-            Assert.notNull(servicePack.getName(), "服务包名不能为空");
+            Assert.notNull(servicePack, messageSource.getMessage("service.validate.servicePack.required", null, Locale.getDefault()));
+            Assert.notNull(servicePack.getComment(), messageSource.getMessage("service.validate.servicePack.comment.required", null, Locale.getDefault()));
+            Assert.notNull(servicePack.getIconPath(), messageSource.getMessage("service.validate.servicePack.icon.required", null, Locale.getDefault()));
+            Assert.notNull(servicePack.getName(), messageSource.getMessage("service.validate.servicePack.name.required", null, Locale.getDefault()));
         } catch (IllegalArgumentException e) {
             ret.setResult(CommonOperationResult.IllegalArguments);
             ret.setDescription(e.getMessage());
@@ -94,8 +98,8 @@ public class ServicePackService {
 
         ServicePack old = servicePackDao.selectById(servicePackId);
         try {
-            Assert.notNull(servicePackId, "服务包ID不能为空");
-            Assert.notNull(status, "服务包状态不能为空");
+            Assert.notNull(servicePackId, messageSource.getMessage("service.validate.servicePack.id.required", null, Locale.getDefault()));
+            Assert.notNull(status, messageSource.getMessage("service.validate.servicePack.status.required", null, Locale.getDefault()));
         } catch (IllegalArgumentException e) {
             ret.setResult(CommonOperationResult.IllegalArguments);
             ret.setDescription(e.getMessage());
@@ -122,10 +126,10 @@ public class ServicePackService {
         CommonOperationResultWidthData ret = new CommonOperationResultWidthData();
 
         try {
-            Assert.notNull(servicePack, "服务包不能为空");
-            Assert.notNull(servicePack.getComment(), "服务包备注不能为空");
-            Assert.notNull(servicePack.getIconPath(), "服务包图标不能为空");
-            Assert.notNull(servicePack.getName(), "服务包名不能为空");
+            Assert.notNull(servicePack, messageSource.getMessage("service.validate.servicePack.required", null, Locale.getDefault()));
+            Assert.notNull(servicePack.getComment(), messageSource.getMessage("service.validate.servicePack.comment.required", null, Locale.getDefault()));
+            Assert.notNull(servicePack.getIconPath(), messageSource.getMessage("service.validate.servicePack.icon.required", null, Locale.getDefault()));
+            Assert.notNull(servicePack.getName(), messageSource.getMessage("service.validate.servicePack.name.required", null, Locale.getDefault()));
         } catch (IllegalArgumentException e) {
             ret.setResult(CommonOperationResult.IllegalArguments);
             ret.setDescription(e.getMessage());

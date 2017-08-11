@@ -6,6 +6,7 @@ import com.ych.shcm.o2o.dao.ServiceProviderDao;
 import com.ych.shcm.o2o.model.ServiceProvider;
 import com.ych.shcm.o2o.model.ServiceProviderBusinessArea;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
@@ -14,6 +15,7 @@ import org.springframework.util.CollectionUtils;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -26,6 +28,8 @@ public class ServiceProviderService {
 
     @Autowired
     private ServiceProviderDao serviceProviderDao;
+    @Autowired
+    private MessageSource messageSource;
 
     /**
      * 新增服务商
@@ -41,7 +45,7 @@ public class ServiceProviderService {
         }
         if (serviceProviderDao.insert(serviceProvider) < 0) {
             ret.setResult(CommonOperationResult.Failed);
-            ret.setDescription("新增失败");
+            ret.setDescription(messageSource.getMessage("system.common.operationFailed", null, Locale.getDefault()));
             return ret;
         }
         ret.setResult(CommonOperationResult.Succeeded);
@@ -66,7 +70,7 @@ public class ServiceProviderService {
         old.setName(serviceProvider.getName());
         if (serviceProviderDao.update(serviceProvider) < 0) {
             ret.setResult(CommonOperationResult.Failed);
-            ret.setDescription("更新失败");
+            ret.setDescription(messageSource.getMessage("system.common.operationFailed", null, Locale.getDefault()));
             return ret;
         }
         ret.setResult(CommonOperationResult.Succeeded);
@@ -82,10 +86,10 @@ public class ServiceProviderService {
      */
     private boolean checkServiceProviderInfo(ServiceProvider serviceProvider, CommonOperationResultWidthData ret) {
         try {
-            Assert.notNull(serviceProvider, "服务商对象不能为空");
-            Assert.notNull(serviceProvider.getAddress(), "服务商地址不能为空");
-            Assert.notNull(serviceProvider.getName(), "服务商名不能为空");
-            Assert.notNull(serviceProvider.getAreaId(), "服务商区域不能为空");
+            Assert.notNull(serviceProvider, messageSource.getMessage("service.validate.servicePack.required", null, Locale.getDefault()));
+            Assert.notNull(serviceProvider.getAddress(), messageSource.getMessage("service.validate.servicePack.addr.required", null, Locale.getDefault()));
+            Assert.notNull(serviceProvider.getName(), messageSource.getMessage("service.validate.servicePack.name.required", null, Locale.getDefault()));
+            Assert.notNull(serviceProvider.getAreaId(), messageSource.getMessage("service.validate.ServiceProvider.area.required", null, Locale.getDefault()));
         } catch (IllegalArgumentException e) {
             ret.setResult(CommonOperationResult.IllegalArguments);
             ret.setDescription(e.getMessage());
@@ -128,8 +132,8 @@ public class ServiceProviderService {
      */
 
     public CommonOperationResultWidthData insertBusinessArea(BigDecimal serviceProviderId, Set<String> businessAreas) {
-        Assert.notNull(serviceProviderId, "服务商ID不能为空");
-        Assert.notEmpty(businessAreas, "服务商ID不能为空");
+        Assert.notNull(serviceProviderId, messageSource.getMessage("service.validate.ServiceProvider.id.required", null, Locale.getDefault()));
+        Assert.notEmpty(businessAreas, messageSource.getMessage("service.validate.ServiceProvider.businessAreas.required", null, Locale.getDefault()));
         List<ServiceProviderBusinessArea> list = new ArrayList<>();
         for (String areaId : businessAreas) {
             ServiceProviderBusinessArea area = new ServiceProviderBusinessArea();
@@ -158,7 +162,7 @@ public class ServiceProviderService {
 
     public CommonOperationResultWidthData modifyBusinessArea(BigDecimal serviceProviderId, Set<String> newBusinessAreas) {
         CommonOperationResultWidthData ret = new CommonOperationResultWidthData();
-        Assert.notNull(serviceProviderId, "服务商ID不能为空");
+        Assert.notNull(serviceProviderId, messageSource.getMessage("service.validate.ServiceProvider.id.required", null, Locale.getDefault()));
         serviceProviderDao.deleteBusinessArea(serviceProviderId);
         if (CollectionUtils.isEmpty(newBusinessAreas)) {
             return ret;

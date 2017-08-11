@@ -326,6 +326,7 @@ public class OrderService {
             orderStatusHis.setStatus(OrderStatus.CANCELED);
             orderStatusHis.setModifierId(old.getModifierId());
             orderStatusHisDao.insert(orderStatusHis);
+            firstMaintenaceChangeCarInfo(old);
         } else {
             ret.setResult(CommonOperationResult.Failed);
             return ret;
@@ -363,6 +364,7 @@ public class OrderService {
             orderStatusHis.setStatus(OrderStatus.CONFIRMED);
             orderStatusHis.setModifierId(old.getModifierId());
             orderStatusHisDao.insert(orderStatusHis);
+            firstMaintenaceChangeCarInfo(old);
         } else {
             ret.setResult(CommonOperationResult.Failed);
             return ret;
@@ -410,6 +412,7 @@ public class OrderService {
             orderStatusHis.setModifierId(old.getModifierId());
             orderStatusHisDao.insert(orderStatusHis);
             addSettleMoney(old);
+            firstMaintenaceChangeCarInfo(old);
             ret.setResult(CommonOperationResult.Succeeded);
         } else {
             ret.setResult(CommonOperationResult.Failed);
@@ -546,6 +549,7 @@ public class OrderService {
             if (orderStatusHisDao.insert(orderStatusHis) <= 0) {
                 throw new RuntimeException(messageSource.getMessage("system.common.operationFailed", null, Locale.getDefault()));
             }
+            firstMaintenaceChangeCarInfo(old);
         } else {
             ret.setResult(CommonOperationResult.IllegalOperation);
             ret.setDescription(messageSource.getMessage("order.validate.order.statusChange", null, Locale.getDefault()));
@@ -833,6 +837,29 @@ public class OrderService {
      */
     public PagedList<OrderEvaluation> getOrderEvaluationList(QueryOrderAppointmentListParameter parameter) {
         return orderEvaluationDao.selectOrderEvaluationList(parameter);
+    }
+
+    /**
+     * 首保后改变车辆信息
+     *
+     * @param order
+     */
+    private void firstMaintenaceChangeCarInfo(Order order) {
+        Car car = carDao.selectById(order.getCarId());
+        if (order.getId().compareTo(car.getFirstOrderId()) == 0) {
+            if (order.getStatus() == OrderStatus.CANCELED || order.getStatus() == OrderStatus.REFUNDED || order.getStatus() == OrderStatus.REFUNDED_OFF_LINE) {
+                car.setFirstOrderId(null);
+                car.setFirstMaintenanceTime(null);
+                car.setFirstMaintenanceMoney(null);
+                car.setFirstOrderStatus(null);
+            } else {
+                car.setFirstOrderStatus(order.getStatus());
+            }
+            if(order.getStatus() == OrderStatus.SERVICED){
+                car.setFirstMaintenanceTime(new Date());
+            }
+            carDao.update(car);
+        }
     }
 
 }
