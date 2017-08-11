@@ -12,9 +12,7 @@ import com.ych.shcm.o2o.dao.OrderStatusHisDao;
 import com.ych.shcm.o2o.dao.UserDao;
 import com.ych.shcm.o2o.event.OrderStatusChanged;
 import com.ych.shcm.o2o.model.AccessChannel;
-import com.ych.shcm.o2o.model.Car;
 import com.ych.shcm.o2o.model.Constants;
-import com.ych.shcm.o2o.model.Order;
 import com.ych.shcm.o2o.model.OrderStatus;
 import com.ych.shcm.o2o.model.UserAccessChannel;
 import com.ych.shcm.o2o.openinf.INotify;
@@ -50,7 +48,6 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.math.BigDecimal;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -251,11 +248,6 @@ public class AccessChannelService {
     @EventListener(condition = "#event.original == true")
     public void onOrderStatusChange(final OrderStatusChanged event) {
         final OrderEventNotifyPayload payload = new OrderEventNotifyPayload();
-        try {
-            firstMaintenaceChangeCarInfo(event.getNewEntity());
-        } catch (RuntimeException e) {
-            logger.error("更新车辆首保失败");
-        }
         switch (event.getNewEntity().getStatus()) {
             case PAYED:
                 payload.setPayTime(orderStatusHisDao.selectLatest(event.getNewEntity().getId(), OrderStatus.PAYED).getModifyTime());
@@ -320,29 +312,6 @@ public class AccessChannelService {
 
         } else {
             taskExecutor.execute(task);
-        }
-    }
-
-    /**
-     * 首保后改变车辆信息
-     *
-     * @param order
-     */
-    private void firstMaintenaceChangeCarInfo(Order order) {
-        Car car = carDao.selectById(order.getCarId());
-        if (order.getId().compareTo(car.getFirstOrderId()) == 0) {
-            if (order.getStatus() == OrderStatus.CANCELED || order.getStatus() == OrderStatus.REFUNDED || order.getStatus() == OrderStatus.REFUNDED_OFF_LINE) {
-                car.setFirstOrderId(null);
-                car.setFirstMaintenanceTime(null);
-                car.setFirstMaintenanceMoney(null);
-                car.setFirstOrderStatus(null);
-            } else {
-                car.setFirstOrderStatus(order.getStatus());
-            }
-            if(order.getStatus() == OrderStatus.SERVICED){
-                car.setFirstMaintenanceTime(new Date());
-            }
-            carDao.update(car);
         }
     }
 

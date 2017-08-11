@@ -1,11 +1,34 @@
 package com.ych.shcm.o2o.service;
 
-import java.math.BigDecimal;
-import java.math.MathContext;
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import javax.annotation.Resource;
-
+import com.ych.core.model.BaseWithCommonOperationResult;
+import com.ych.core.model.CommonOperationResult;
+import com.ych.core.model.CommonOperationResultWidthData;
+import com.ych.core.model.SystemParameterHolder;
+import com.ych.core.pay.ChannelOperationResult;
+import com.ych.core.pay.CreatePayOrderParameter;
+import com.ych.core.pay.CreatePayOrderParameterImpl;
+import com.ych.core.pay.PaymentStrategy;
+import com.ych.shcm.o2o.dao.CarDao;
+import com.ych.shcm.o2o.dao.OrderDao;
+import com.ych.shcm.o2o.dao.OrderStatusHisDao;
+import com.ych.shcm.o2o.dao.PayFeeConfigDao;
+import com.ych.shcm.o2o.dao.PayOrderDao;
+import com.ych.shcm.o2o.dao.RefundOrderDao;
+import com.ych.shcm.o2o.event.OrderStatusChanged;
+import com.ych.shcm.o2o.model.Car;
+import com.ych.shcm.o2o.model.Constants;
+import com.ych.shcm.o2o.model.Order;
+import com.ych.shcm.o2o.model.OrderStatus;
+import com.ych.shcm.o2o.model.OrderStatusHis;
+import com.ych.shcm.o2o.model.PayChannel;
+import com.ych.shcm.o2o.model.PayFeeConfig;
+import com.ych.shcm.o2o.model.PayOrder;
+import com.ych.shcm.o2o.model.PayOrderOrder;
+import com.ych.shcm.o2o.model.PayOrderStatus;
+import com.ych.shcm.o2o.model.PayOrderStatusHistory;
+import com.ych.shcm.o2o.model.RefundOrder;
+import com.ych.shcm.o2o.model.RefundOrderStatus;
+import com.ych.shcm.o2o.service.systemparamholder.PayOrderExpires;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateFormatUtils;
@@ -21,18 +44,16 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionCallbackWithoutResult;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import com.ych.core.model.BaseWithCommonOperationResult;
-import com.ych.core.model.CommonOperationResult;
-import com.ych.core.model.CommonOperationResultWidthData;
-import com.ych.core.model.SystemParameterHolder;
-import com.ych.core.pay.ChannelOperationResult;
-import com.ych.core.pay.CreatePayOrderParameter;
-import com.ych.core.pay.CreatePayOrderParameterImpl;
-import com.ych.core.pay.PaymentStrategy;
-import com.ych.shcm.o2o.dao.*;
-import com.ych.shcm.o2o.event.OrderStatusChanged;
-import com.ych.shcm.o2o.model.*;
-import com.ych.shcm.o2o.service.systemparamholder.PayOrderExpires;
+import javax.annotation.Resource;
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * 支付单服务
@@ -74,6 +95,8 @@ public class PayOrderService {
 
     @Autowired
     private ApplicationContext context;
+    @Autowired
+    private CarDao carDao;
 
     /**
      * @return 生成新的流水号
@@ -288,7 +311,7 @@ public class PayOrderService {
                         order.setStatus(OrderStatus.REFUNDED);
                         order.setModifierId(BigDecimal.ZERO);
                         orderDao.update(order);
-
+                        firstMaintenaceChangeCarInfo(order);
                         OrderStatusHis orderStatusHis = new OrderStatusHis();
                         orderStatusHis.setOrderId(order.getId());
                         orderStatusHis.setOldStatus(oldOrder.getStatus());
@@ -361,7 +384,7 @@ public class PayOrderService {
                 order.setStatus(OrderStatus.PAYED);
                 order.setModifierId(BigDecimal.ZERO);
                 orderDao.update(order);
-
+                firstMaintenaceChangeCarInfo(order);
                 OrderStatusHis orderStatusHis = new OrderStatusHis();
                 orderStatusHis.setOrderId(order.getId());
                 orderStatusHis.setOldStatus(oldOrder.getStatus());
@@ -388,4 +411,26 @@ public class PayOrderService {
         return payOrderDao.selectPayedByOrderId(orderId);
     }
 
+    /**
+     * 首保后改变车辆信息
+     *
+     * @param order
+     */
+    private void firstMaintenaceChangeCarInfo(Order order) {
+        Car car = carDao.selectById(order.getCarId());
+        if (order.getId().compareTo(car.getFirstOrderId()) == 0) {
+            if (order.getStatus() == OrderStatus.CANCELED || order.getStatus() == OrderStatus.REFUNDED || order.getStatus() == OrderStatus.REFUNDED_OFF_LINE) {
+                car.setFirstOrderId(null);
+                car.setFirstMaintenanceTime(null);
+                car.setFirstMaintenanceMoney(null);
+                car.setFirstOrderStatus(null);
+            } else {
+                car.setFirstOrderStatus(order.getStatus());
+            }
+            if (order.getStatus() == OrderStatus.SERVICED) {
+                car.setFirstMaintenanceTime(new Date());
+            }
+            carDao.update(car);
+        }
+    }
 }

@@ -8,11 +8,13 @@ import com.ych.shcm.o2o.model.ServiceItem;
 import com.ych.shcm.o2o.model.ServiceStatus;
 import com.ych.shcm.o2o.parameter.QueryServiceItemListParameter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.springframework.util.Assert;
 
 import java.math.BigDecimal;
+import java.util.Locale;
 
 /**
  * 服务项目服务
@@ -23,6 +25,8 @@ public class ServiceItemService {
 
     @Autowired
     private ServiceItemDao serviceItemDao;
+    @Autowired
+    private MessageSource messageSource;
 
     /**
      * 根据ID取得服务项目详情
@@ -46,13 +50,13 @@ public class ServiceItemService {
         ServiceItem old = serviceItemDao.selectById(serviceItem.getId());
         CommonOperationResultWidthData ret = new CommonOperationResultWidthData();
         try {
-            Assert.notNull(serviceItem, "服务项目不能为空");
-            Assert.notNull(serviceItem.getComment(), "服务项目备注不能为空");
-            Assert.notNull(serviceItem.getIconPath(), "服务项目图标不能为空");
-            Assert.notNull(serviceItem.getBrokerage(), "服务项目佣金不能为空");
-            Assert.notNull(serviceItem.getType(), "服务项目类型不能为空");
-            Assert.notNull(serviceItem.getPrice(), "服务项目价格不能为空");
-            Assert.notNull(serviceItem.getName(), "服务项目名不能为空");
+            Assert.notNull(serviceItem, messageSource.getMessage("service.validate.serviceItem.required", null, Locale.getDefault()));
+            Assert.hasLength(serviceItem.getComment(), messageSource.getMessage("service.validate.serviceItem.comment.required", null, Locale.getDefault()));
+            Assert.hasLength(serviceItem.getIconPath(), messageSource.getMessage("service.validate.serviceItem.icon.required", null, Locale.getDefault()));
+            Assert.notNull(serviceItem.getBrokerage(), messageSource.getMessage("service.validate.serviceItem.brokerage.required", null, Locale.getDefault()));
+            Assert.notNull(serviceItem.getType(), messageSource.getMessage("service.validate.serviceItem.type.required", null, Locale.getDefault()));
+            Assert.notNull(serviceItem.getPrice(), messageSource.getMessage("service.validate.serviceItem.price.required", null, Locale.getDefault()));
+            Assert.hasLength(serviceItem.getName(), messageSource.getMessage("service.validate.serviceItem.name.required", null, Locale.getDefault()));
         } catch (IllegalArgumentException e) {
             ret.setResult(CommonOperationResult.IllegalArguments);
             ret.setDescription(e.getMessage());
@@ -87,8 +91,8 @@ public class ServiceItemService {
 
         ServiceItem old = serviceItemDao.selectById(serviceItemId);
         try {
-            Assert.notNull(serviceItemId, "服务项目ID不能为空");
-            Assert.notNull(status, "服务项目状态不能为空");
+            Assert.notNull(serviceItemId, messageSource.getMessage("service.validate.serviceItem.id.required", null, Locale.getDefault()));
+            Assert.notNull(status, messageSource.getMessage("service.validate.serviceItem.status.required", null, Locale.getDefault()));
         } catch (IllegalArgumentException e) {
             ret.setResult(CommonOperationResult.IllegalArguments);
             ret.setDescription(e.getMessage());
@@ -115,13 +119,13 @@ public class ServiceItemService {
         CommonOperationResultWidthData ret = new CommonOperationResultWidthData();
 
         try {
-            Assert.notNull(serviceItem, "服务项目不能为空");
-            Assert.notNull(serviceItem.getComment(), "服务项目备注不能为空");
-            Assert.notNull(serviceItem.getIconPath(), "服务项目图标不能为空");
-            Assert.notNull(serviceItem.getBrokerage(), "服务项目佣金不能为空");
-            Assert.notNull(serviceItem.getType(), "服务项目类型不能为空");
-            Assert.notNull(serviceItem.getPrice(), "服务项目价格不能为空");
-            Assert.notNull(serviceItem.getName(), "服务项目名不能为空");
+            Assert.notNull(serviceItem, messageSource.getMessage("service.validate.serviceItem.required", null, Locale.getDefault()));
+            Assert.hasLength(serviceItem.getComment(), messageSource.getMessage("service.validate.ServiceProvider.addr.required", null, Locale.getDefault()));
+            Assert.hasLength(serviceItem.getIconPath(), messageSource.getMessage("service.validate.serviceItem.icon.required", null, Locale.getDefault()));
+            Assert.notNull(serviceItem.getBrokerage(), messageSource.getMessage("service.validate.serviceItem.brokerage.required", null, Locale.getDefault()));
+            Assert.notNull(serviceItem.getType(), messageSource.getMessage("service.validate.serviceItem.type.required", null, Locale.getDefault()));
+            Assert.notNull(serviceItem.getPrice(), messageSource.getMessage("service.validate.serviceItem.price.required", null, Locale.getDefault()));
+            Assert.hasLength(serviceItem.getName(), messageSource.getMessage("service.validate.serviceItem.name.required", null, Locale.getDefault()));
         } catch (IllegalArgumentException e) {
             ret.setResult(CommonOperationResult.IllegalArguments);
             ret.setDescription(e.getMessage());

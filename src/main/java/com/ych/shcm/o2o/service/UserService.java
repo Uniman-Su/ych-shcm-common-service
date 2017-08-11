@@ -1,18 +1,40 @@
 package com.ych.shcm.o2o.service;
 
-import java.math.BigDecimal;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
-
+import com.ych.core.model.CommonOperationResult;
+import com.ych.shcm.o2o.dao.CarDao;
+import com.ych.shcm.o2o.dao.CarModelDao;
+import com.ych.shcm.o2o.dao.OrderDao;
+import com.ych.shcm.o2o.dao.OrderStatusHisDao;
+import com.ych.shcm.o2o.dao.UserCarDao;
+import com.ych.shcm.o2o.dao.UserDao;
+import com.ych.shcm.o2o.dao.UserThirdAuthDao;
+import com.ych.shcm.o2o.event.OrderStatusChanged;
+import com.ych.shcm.o2o.model.AccessChannel;
+import com.ych.shcm.o2o.model.Car;
+import com.ych.shcm.o2o.model.CarExpiredMaintenanceInfo;
+import com.ych.shcm.o2o.model.CarModel;
+import com.ych.shcm.o2o.model.CarUserHistory;
+import com.ych.shcm.o2o.model.Constants;
+import com.ych.shcm.o2o.model.Order;
+import com.ych.shcm.o2o.model.OrderStatus;
+import com.ych.shcm.o2o.model.OrderStatusHis;
+import com.ych.shcm.o2o.model.ThirdAuthType;
+import com.ych.shcm.o2o.model.User;
+import com.ych.shcm.o2o.model.UserAccessChannel;
+import com.ych.shcm.o2o.model.UserCar;
+import com.ych.shcm.o2o.model.UserThirdAuth;
+import com.ych.shcm.o2o.openinf.GuaranteeRequestPayload;
+import com.ych.shcm.o2o.openinf.IRequest;
+import com.ych.shcm.o2o.openinf.IResponse;
+import com.ych.shcm.o2o.openinf.RequestAction;
+import com.ych.shcm.o2o.openinf.Response;
 import org.apache.commons.lang3.ObjectUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.TransactionStatus;
@@ -20,11 +42,12 @@ import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.Assert;
 
-import com.ych.core.model.CommonOperationResult;
-import com.ych.shcm.o2o.dao.*;
-import com.ych.shcm.o2o.event.OrderStatusChanged;
-import com.ych.shcm.o2o.model.*;
-import com.ych.shcm.o2o.openinf.*;
+import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
+import java.math.BigDecimal;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
 
 /**
  * 用户的服务
@@ -69,6 +92,8 @@ public class UserService {
 
     @Autowired
     private ApplicationContext context;
+    @Autowired
+    private MessageSource messageSource;
 
     @PostConstruct
     public void init() {
@@ -130,15 +155,15 @@ public class UserService {
             final GuaranteeRequestPayload payload = (GuaranteeRequestPayload) request.getPayload();
             Response response = new Response();
             try {
-                Assert.notNull(payload, "请求对象不能为空");
-                Assert.notNull(payload.getId(), "用户在自身平台的id不能为空");
-                Assert.notNull(payload.getName(), "用户的姓名不能为空");
-                Assert.notNull(payload.getPhone(), "用户电话不能为空");
-                Assert.notNull(payload.getVin(), "车辆的VIN码不能为空");
-                Assert.notNull(payload.getModelId(), "车型不能为空");
-                Assert.notNull(payload.getEffectiveTime(), "生效时间不能为空");
-                Assert.notNull(payload.getExpires(), "过期时间不能为空");
-                Assert.notNull(accessChannel, "访问渠道ID不能为空");
+                Assert.notNull(payload, messageSource.getMessage("order.validate.user.accessObj.required", null, Locale.getDefault()));
+                Assert.notNull(payload.getId(), messageSource.getMessage("order.validate.user.accessChannel.userId.required", null, Locale.getDefault()));
+                Assert.hasLength(payload.getName(), messageSource.getMessage("order.validate.user.userName.required", null, Locale.getDefault()));
+                Assert.hasLength(payload.getPhone(), messageSource.getMessage("order.validate.user.phone.required", null, Locale.getDefault()));
+                Assert.hasLength(payload.getVin(), messageSource.getMessage("order.validate.user.vin.required", null, Locale.getDefault()));
+                Assert.notNull(payload.getModelId(), messageSource.getMessage("order.validate.user.modelId.required", null, Locale.getDefault()));
+                Assert.notNull(payload.getEffectiveTime(), messageSource.getMessage("order.validate.user.effectiveTime.required", null, Locale.getDefault()));
+                Assert.notNull(payload.getExpires(), messageSource.getMessage("order.validate.user.expires.required", null, Locale.getDefault()));
+                Assert.notNull(accessChannel, messageSource.getMessage("order.validate.user.accessChannel.required", null, Locale.getDefault()));
             } catch (IllegalArgumentException e) {
                 response.setResult(CommonOperationResult.Failed.name());
                 response.setResultMsg(e.getMessage());
@@ -246,7 +271,7 @@ public class UserService {
                             if (!userCar.getUserId().equals(userAccessChannel.getUserId())) {
                                 userCarDao.deleteUserCarById(userCar.getId());
 
-                                if(oldFirstOrderStatus == OrderStatus.UNPAYED || oldFirstOrderStatus == OrderStatus.PAYED) {
+                                if (oldFirstOrderStatus == OrderStatus.UNPAYED || oldFirstOrderStatus == OrderStatus.PAYED) {
                                     Order order = orderDao.selectById(oldFirstOrderId);
                                     Order oldOrder = ObjectUtils.clone(order);
 
