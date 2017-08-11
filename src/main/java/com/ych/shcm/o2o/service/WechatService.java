@@ -59,6 +59,9 @@ public class WechatService {
     private CarDao carDao;
 
     @Autowired
+    private CarModelDao carModelDao;
+
+    @Autowired
     private UserCarDao userCarDao;
 
     @Autowired
@@ -184,10 +187,18 @@ public class WechatService {
                 return ret;
             }
 
+
             UserCar userCar = userCarDao.selectUserCarByUserIdAndCarId(userAccessChannel.getUserId(), car.getId());
             if (userCar == null) {
                 result.setResult(CommonOperationResult.IllegalArguments);
                 result.setDescription(messageSource.getMessage("accessChannel.vin.wrongUser", null, Locale.getDefault()));
+                return ret;
+            }
+
+            CarModel carModel = carModelDao.selectById(car.getModelId(), false);
+            if (carModel.getEngineOilCapacity().compareTo(BigDecimal.ZERO) == 0) {
+                result.setResult(CommonOperationResult.IllegalArguments);
+                result.setDescription(messageSource.getMessage("carModel.enginOil.capacity.notExisted", null, Locale.getDefault()));
                 return ret;
             }
 
@@ -206,7 +217,7 @@ public class WechatService {
      * @return 如果验证成功会附带返回微信用户授权页的URL, 否则会返回错误描述
      */
     public CommonOperationResultWidthData<String> navigateIn(NavigateInParameter parameter) {
-        logger.info("Wechat naviagete in:{}", parameter);
+        logger.info("Wechat navigate in:{}", parameter);
 
         CommonOperationResultWidthData<String> ret = new CommonOperationResultWidthData<>();
 
