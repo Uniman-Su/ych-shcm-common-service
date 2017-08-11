@@ -133,7 +133,7 @@ public class ServiceProviderService {
 
     public CommonOperationResultWidthData insertBusinessArea(BigDecimal serviceProviderId, Set<String> businessAreas) {
         Assert.notNull(serviceProviderId, messageSource.getMessage("serviceProvider.id.required", null, Locale.getDefault()));
-        Assert.notEmpty(businessAreas, messageSource.getMessage("businessAreas.required", null, Locale.getDefault()));
+        Assert.notEmpty(businessAreas, messageSource.getMessage("serviceProvider.businessAreas.required", null, Locale.getDefault()));
         List<ServiceProviderBusinessArea> list = new ArrayList<>();
         for (String areaId : businessAreas) {
             ServiceProviderBusinessArea area = new ServiceProviderBusinessArea();

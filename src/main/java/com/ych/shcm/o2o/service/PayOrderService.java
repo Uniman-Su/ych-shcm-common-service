@@ -282,7 +282,7 @@ public class PayOrderService {
 
         if (order.getStatus() != OrderStatus.PAYED) {
             ret.setResult(CommonOperationResult.IllegalStatus);
-            ret.setDescription(context.getMessage("system.common.illegalStatus", null, Locale.getDefault()));
+            ret.setDescription(context.getMessage("order.status.illegal", null, Locale.getDefault()));
             return ret;
         }
 

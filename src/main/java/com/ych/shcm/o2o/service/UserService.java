@@ -155,14 +155,14 @@ public class UserService {
             final GuaranteeRequestPayload payload = (GuaranteeRequestPayload) request.getPayload();
             Response response = new Response();
             try {
-                Assert.notNull(payload, messageSource.getMessage("accessObj.required", null, Locale.getDefault()));
+                Assert.notNull(payload, messageSource.getMessage("accessChannel.payload.required", null, Locale.getDefault()));
                 Assert.notNull(payload.getId(), messageSource.getMessage("accessChannel.userId.required", null, Locale.getDefault()));
-                Assert.hasLength(payload.getName(), messageSource.getMessage("userName.required", null, Locale.getDefault()));
-                Assert.hasLength(payload.getPhone(), messageSource.getMessage("user.phone.required", null, Locale.getDefault()));
-                Assert.hasLength(payload.getVin(), messageSource.getMessage("vin.required", null, Locale.getDefault()));
-                Assert.notNull(payload.getModelId(), messageSource.getMessage("modelId.required", null, Locale.getDefault()));
-                Assert.notNull(payload.getEffectiveTime(), messageSource.getMessage("effectiveTime.required", null, Locale.getDefault()));
-                Assert.notNull(payload.getExpires(), messageSource.getMessage("expires.required", null, Locale.getDefault()));
+                Assert.hasLength(payload.getName(), messageSource.getMessage("accessChannel.userName.required", null, Locale.getDefault()));
+                Assert.hasLength(payload.getPhone(), messageSource.getMessage("accessChannel.userPhone.required", null, Locale.getDefault()));
+                Assert.hasLength(payload.getVin(), messageSource.getMessage("accessChannel.vin.required", null, Locale.getDefault()));
+                Assert.notNull(payload.getModelId(), messageSource.getMessage("accessChannel.car.modelId.required", null, Locale.getDefault()));
+                Assert.notNull(payload.getEffectiveTime(), messageSource.getMessage("accessChannel.effectiveTime.required", null, Locale.getDefault()));
+                Assert.notNull(payload.getExpires(), messageSource.getMessage("accessChannel.expires.required", null, Locale.getDefault()));
                 Assert.notNull(accessChannel, messageSource.getMessage("accessChannel.required", null, Locale.getDefault()));
             } catch (IllegalArgumentException e) {
                 response.setResult(CommonOperationResult.Failed.name());
