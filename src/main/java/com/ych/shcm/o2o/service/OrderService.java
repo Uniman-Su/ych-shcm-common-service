@@ -7,15 +7,18 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Resource;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateFormatUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.MessageSource;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
@@ -31,6 +34,7 @@ import com.ych.shcm.o2o.parameter.QueryOrderAppointmentListParameter;
 import com.ych.shcm.o2o.parameter.QueryOrderListParameter;
 import com.ych.shcm.o2o.service.systemparamholder.ServiceProviderIncomesRate;
 import com.ych.shcm.o2o.service.systemparamholder.ServiceProviderSettleDelay;
+import com.ych.shcm.o2o.service.systemparamholder.ServicedOrderTimeoutDay;
 import com.ych.shcm.o2o.service.systemparamholder.ShopSettleDelay;
 
 /**
@@ -99,15 +103,18 @@ public class OrderService {
 
     @Autowired
     private ShopDao shopDao;
+    
     @Autowired
-    private ApplicationEventPublisher appCtx;
+    private ApplicationContext appCtx;
+    
     @Autowired
     private ServiceProviderDao serviceProviderDao;
-    @Autowired
-    private MessageSource messageSource;
 
     @Autowired
     private UserCarDao userCarDao;
+    
+    @Resource(name = ServicedOrderTimeoutDay.NAME)
+    private SystemParameterHolder servicedOrderTimeoutDay;
 
     /**
      * 通过ID取得订单详情
@@ -151,11 +158,11 @@ public class OrderService {
         List<ServicePack> servicePacks = carService.getServicePackOfCar(car.getModelId());
 
         try {
-            Assert.notNull(order.getCarId(), messageSource.getMessage("car.id.required", null, Locale.getDefault()));
-            Assert.notEmpty(order.getOrderServicePacks(), messageSource.getMessage("servicePack.required", null, Locale.getDefault()));
-            Assert.notNull(car, messageSource.getMessage("car.id.notExists", null, Locale.getDefault()));
-            Assert.notNull(order.getUserId(), messageSource.getMessage("user.id.required", null, Locale.getDefault()));
-            Assert.notEmpty(servicePacks, messageSource.getMessage("carModel.no.service.use", null, Locale.getDefault()));
+            Assert.notNull(order.getCarId(), appCtx.getMessage("car.id.required", null, Locale.getDefault()));
+            Assert.notEmpty(order.getOrderServicePacks(), appCtx.getMessage("servicePack.required", null, Locale.getDefault()));
+            Assert.notNull(car, appCtx.getMessage("car.id.notExists", null, Locale.getDefault()));
+            Assert.notNull(order.getUserId(), appCtx.getMessage("user.id.required", null, Locale.getDefault()));
+            Assert.notEmpty(servicePacks, appCtx.getMessage("carModel.no.service.use", null, Locale.getDefault()));
         } catch (IllegalArgumentException e) {
             ret.setResult(CommonOperationResult.IllegalArguments);
             ret.setDescription(e.getMessage());
@@ -167,7 +174,7 @@ public class OrderService {
         } else {
             if (car.getFirstOrderStatus() == OrderStatus.UNPAYED || car.getFirstOrderStatus() == OrderStatus.PAYED) {
                 ret.setResult(CommonOperationResult.IllegalOperation);
-                ret.setDescription(messageSource.getMessage("car.firstMaintenance.notDone", null, Locale.getDefault()));
+                ret.setDescription(appCtx.getMessage("car.firstMaintenance.notDone", null, Locale.getDefault()));
                 return ret;
             }
         }
@@ -181,7 +188,7 @@ public class OrderService {
             if (isFirstMaintenance) {
                 if (pack.getServicePackId().compareTo(servicePacks.get(0).getId()) != 0) {
                     ret.setResult(CommonOperationResult.IllegalArguments);
-                    ret.setDescription(messageSource.getMessage("car.firstMaintenance.required", null, Locale.getDefault()));
+                    ret.setDescription(appCtx.getMessage("car.firstMaintenance.required", null, Locale.getDefault()));
                     return ret;
                 }
                 servicePack = servicePacks.get(0);
@@ -194,7 +201,7 @@ public class OrderService {
             }
             if (servicePack == null) {
                 ret.setResult(CommonOperationResult.IllegalArguments);
-                ret.setDescription(messageSource.getMessage("servicePack.id.notExists", null, Locale.getDefault()));
+                ret.setDescription(appCtx.getMessage("servicePack.id.notExists", null, Locale.getDefault()));
                 return ret;
             }
             OrderServicePack orderServicePack = new OrderServicePack();
@@ -267,7 +274,7 @@ public class OrderService {
         Order oldEventEntity = ObjectUtils.clone(old);
         if (old == null) {
             ret.setResult(CommonOperationResult.NotExists);
-            ret.setDescription(messageSource.getMessage("order.id.notExists", null, Locale.getDefault()));
+            ret.setDescription(appCtx.getMessage("order.id.notExists", null, Locale.getDefault()));
             return ret;
         }
         OrderStatus oldStatus = old.getStatus();
@@ -305,7 +312,7 @@ public class OrderService {
         Order oldEventEntity = ObjectUtils.clone(old);
         if (old == null) {
             ret.setResult(CommonOperationResult.NotExists);
-            ret.setDescription(messageSource.getMessage("order.id.notExists", null, Locale.getDefault()));
+            ret.setDescription(appCtx.getMessage("order.id.notExists", null, Locale.getDefault()));
             return ret;
         }
         OrderStatus oldStatus = old.getStatus();
@@ -345,7 +352,7 @@ public class OrderService {
         Order oldEventEntity = ObjectUtils.clone(old);
         if (old == null) {
             ret.setResult(CommonOperationResult.NotExists);
-            ret.setDescription(messageSource.getMessage("order.id.notExists", null, Locale.getDefault()));
+            ret.setDescription(appCtx.getMessage("order.id.notExists", null, Locale.getDefault()));
             return ret;
         }
         OrderStatus oldStatus = old.getStatus();
@@ -357,7 +364,7 @@ public class OrderService {
             old.setMileage(mileage);
             if (orderDao.update(old) <= 0) {
                 ret.setResult(CommonOperationResult.Failed);
-                ret.setDescription(messageSource.getMessage("order.statusChange", null, Locale.getDefault()));
+                ret.setDescription(appCtx.getMessage("order.statusChange", null, Locale.getDefault()));
             }
             OrderStatusHis orderStatusHis = new OrderStatusHis();
             orderStatusHis.setOrderId(old.getId());
@@ -369,7 +376,7 @@ public class OrderService {
             ret.setResult(CommonOperationResult.Succeeded);
         } else {
             ret.setResult(CommonOperationResult.Failed);
-            ret.setDescription(messageSource.getMessage("order.status.illegal", null, Locale.getDefault()));
+            ret.setDescription(appCtx.getMessage("order.status.illegal", null, Locale.getDefault()));
             return ret;
 
         }
@@ -410,12 +417,12 @@ public class OrderService {
         CommonOperationResultWidthData ret = new CommonOperationResultWidthData();
 
         try {
-            Assert.notNull(orderAppointment, messageSource.getMessage("order.appointment.required", null, Locale.getDefault()));
-            Assert.notNull(orderAppointment.getOrderId(), messageSource.getMessage("order.id.required", null, Locale.getDefault()));
-            Assert.notNull(orderAppointment.getAppointedTime(), messageSource.getMessage("order.appointment.time.required", null, Locale.getDefault()));
-            Assert.hasLength(orderAppointment.getPhone(), messageSource.getMessage("order.appointment.phone.required", null, Locale.getDefault()));
-            Assert.notNull(orderAppointment.getShopId(), messageSource.getMessage("shop.id.required", null, Locale.getDefault()));
-            Assert.hasLength(orderAppointment.getPtc(), messageSource.getMessage("order.appointment.ptc.required", null, Locale.getDefault()));
+            Assert.notNull(orderAppointment, appCtx.getMessage("order.appointment.required", null, Locale.getDefault()));
+            Assert.notNull(orderAppointment.getOrderId(), appCtx.getMessage("order.id.required", null, Locale.getDefault()));
+            Assert.notNull(orderAppointment.getAppointedTime(), appCtx.getMessage("order.appointment.time.required", null, Locale.getDefault()));
+            Assert.hasLength(orderAppointment.getPhone(), appCtx.getMessage("order.appointment.phone.required", null, Locale.getDefault()));
+            Assert.notNull(orderAppointment.getShopId(), appCtx.getMessage("shop.id.required", null, Locale.getDefault()));
+            Assert.hasLength(orderAppointment.getPtc(), appCtx.getMessage("order.appointment.ptc.required", null, Locale.getDefault()));
         } catch (IllegalArgumentException e) {
             ret.setResult(CommonOperationResult.IllegalArguments);
             ret.setDescription(e.getMessage());
@@ -464,13 +471,13 @@ public class OrderService {
         CommonOperationResultWidthData ret = new CommonOperationResultWidthData<>();
 
         try {
-            Assert.notNull(orderEvaluation, messageSource.getMessage("order.evaluation.required", null, Locale.getDefault()));
-            Assert.notNull(orderEvaluation.getOrderId(), messageSource.getMessage("order.id.required", null, Locale.getDefault()));
-            Assert.notNull(orderEvaluation.getSkill(), messageSource.getMessage("order.evaluation.skill.required", null, Locale.getDefault()));
-            Assert.notNull(orderEvaluation.getAttitude(), messageSource.getMessage("order.evaluation.attitude.required", null, Locale.getDefault()));
-            Assert.notNull(orderEvaluation.getEfficiency(), messageSource.getMessage("order.evaluation.efficiency.required", null, Locale.getDefault()));
-            Assert.notNull(orderEvaluation.getEnvironment(), messageSource.getMessage("order.evaluation.environment.required", null, Locale.getDefault()));
-            Assert.notNull(orderEvaluation.getOverallEvaluation(), messageSource.getMessage("order.evaluation.overall.required", null, Locale.getDefault()));
+            Assert.notNull(orderEvaluation, appCtx.getMessage("order.evaluation.required", null, Locale.getDefault()));
+            Assert.notNull(orderEvaluation.getOrderId(), appCtx.getMessage("order.id.required", null, Locale.getDefault()));
+            Assert.notNull(orderEvaluation.getSkill(), appCtx.getMessage("order.evaluation.skill.required", null, Locale.getDefault()));
+            Assert.notNull(orderEvaluation.getAttitude(), appCtx.getMessage("order.evaluation.attitude.required", null, Locale.getDefault()));
+            Assert.notNull(orderEvaluation.getEfficiency(), appCtx.getMessage("order.evaluation.efficiency.required", null, Locale.getDefault()));
+            Assert.notNull(orderEvaluation.getEnvironment(), appCtx.getMessage("order.evaluation.environment.required", null, Locale.getDefault()));
+            Assert.notNull(orderEvaluation.getOverallEvaluation(), appCtx.getMessage("order.evaluation.overall.required", null, Locale.getDefault()));
 
         } catch (IllegalArgumentException e) {
             ret.setResult(CommonOperationResult.IllegalArguments);
@@ -480,7 +487,7 @@ public class OrderService {
         Order old = orderDao.selectById(orderEvaluation.getOrderId());
         if (old == null) {
             ret.setResult(CommonOperationResult.NotExists);
-            ret.setDescription(messageSource.getMessage("order.id.notExists", null, Locale.getDefault()));
+            ret.setDescription(appCtx.getMessage("order.id.notExists", null, Locale.getDefault()));
             return ret;
         }
         Order oldEventEntity = ObjectUtils.clone(old);
@@ -491,7 +498,7 @@ public class OrderService {
 
             if (orderDao.update(old) <= 0) {
                 ret.setResult(CommonOperationResult.Failed);
-                ret.setDescription(messageSource.getMessage("system.common.operationFailed", null, Locale.getDefault()));
+                ret.setDescription(appCtx.getMessage("system.common.operationFailed", null, Locale.getDefault()));
                 return ret;
             }
             OrderStatusHis orderStatusHis = new OrderStatusHis();
@@ -500,15 +507,15 @@ public class OrderService {
             orderStatusHis.setStatus(OrderStatus.EVALUATED);
             orderStatusHis.setModifierId(old.getModifierId());
             if (orderStatusHisDao.insert(orderStatusHis) <= 0) {
-                throw new RuntimeException(messageSource.getMessage("system.common.operationFailed", null, Locale.getDefault()));
+                throw new RuntimeException(appCtx.getMessage("system.common.operationFailed", null, Locale.getDefault()));
             }
         } else {
             ret.setResult(CommonOperationResult.IllegalOperation);
-            ret.setDescription(messageSource.getMessage("order.statusChange", null, Locale.getDefault()));
+            ret.setDescription(appCtx.getMessage("order.statusChange", null, Locale.getDefault()));
             return ret;
         }
         if (orderEvaluationDao.insert(orderEvaluation) < 0) {
-            throw new RuntimeException(messageSource.getMessage("system.common.operationFailed", null, Locale.getDefault()));
+            throw new RuntimeException(appCtx.getMessage("system.common.operationFailed", null, Locale.getDefault()));
         }
 
         Order order = orderDao.selectById(orderEvaluation.getOrderId());
@@ -518,7 +525,7 @@ public class OrderService {
         shop.setAverageScore((shop.getAverageScore() * count + orderEvaluation.getAverage().doubleValue()) / (count + 1));
 
         if (shopDao.update(shop) <= 0) {
-            throw new RuntimeException(messageSource.getMessage("system.common.operationFailed", null, Locale.getDefault()));
+            throw new RuntimeException(appCtx.getMessage("system.common.operationFailed", null, Locale.getDefault()));
         }
         ret.setResult(CommonOperationResult.Succeeded);
 
@@ -748,16 +755,16 @@ public class OrderService {
     public CommonOperationResultWidthData addOrderBill(OrderBill orderBill) {
         CommonOperationResultWidthData ret = new CommonOperationResultWidthData();
         try {
-            Assert.notNull(orderBill, messageSource.getMessage("order.bill.required", null, Locale.getDefault()));
-            Assert.notNull(orderBill.getOrderId(), messageSource.getMessage("order.id.required", null, Locale.getDefault()));
-            Assert.hasLength(orderBill.getBank(), messageSource.getMessage("company.bank.required", null, Locale.getDefault()));
-            Assert.hasLength(orderBill.getBankAccount(), messageSource.getMessage("company.bankAccount.required", null, Locale.getDefault()));
-            Assert.hasLength(orderBill.getCompany(), messageSource.getMessage("company.name.required", null, Locale.getDefault()));
-            Assert.hasLength(orderBill.getCompanyAddr(), messageSource.getMessage("company.address.required", null, Locale.getDefault()));
-            Assert.hasLength(orderBill.getDeliverAddr(), messageSource.getMessage("order.bill.deliverAddr.required", null, Locale.getDefault()));
-            Assert.hasLength(orderBill.getTaxNo(), messageSource.getMessage("order.bill.taxNo.required", null, Locale.getDefault()));
-            Assert.hasLength(orderBill.getPtc(), messageSource.getMessage("order.bill.ptc.required", null, Locale.getDefault()));
-            Assert.hasLength(orderBill.getPhone(), messageSource.getMessage("company.phone.required", null, Locale.getDefault()));
+            Assert.notNull(orderBill, appCtx.getMessage("order.bill.required", null, Locale.getDefault()));
+            Assert.notNull(orderBill.getOrderId(), appCtx.getMessage("order.id.required", null, Locale.getDefault()));
+            Assert.hasLength(orderBill.getBank(), appCtx.getMessage("company.bank.required", null, Locale.getDefault()));
+            Assert.hasLength(orderBill.getBankAccount(), appCtx.getMessage("company.bankAccount.required", null, Locale.getDefault()));
+            Assert.hasLength(orderBill.getCompany(), appCtx.getMessage("company.name.required", null, Locale.getDefault()));
+            Assert.hasLength(orderBill.getCompanyAddr(), appCtx.getMessage("company.address.required", null, Locale.getDefault()));
+            Assert.hasLength(orderBill.getDeliverAddr(), appCtx.getMessage("order.bill.deliverAddr.required", null, Locale.getDefault()));
+            Assert.hasLength(orderBill.getTaxNo(), appCtx.getMessage("order.bill.taxNo.required", null, Locale.getDefault()));
+            Assert.hasLength(orderBill.getPtc(), appCtx.getMessage("order.bill.ptc.required", null, Locale.getDefault()));
+            Assert.hasLength(orderBill.getPhone(), appCtx.getMessage("company.phone.required", null, Locale.getDefault()));
 
         } catch (IllegalArgumentException e) {
             ret.setResult(CommonOperationResult.IllegalArguments);
@@ -767,12 +774,12 @@ public class OrderService {
         OrderBill orderBill1 = orderBillDao.selectByOrderId(orderBill.getOrderId());
         if (orderBill1 != null) {
             ret.setResult(CommonOperationResult.Failed);
-            ret.setDescription(messageSource.getMessage("order.bill.applied", null, Locale.getDefault()));
+            ret.setDescription(appCtx.getMessage("order.bill.applied", null, Locale.getDefault()));
             return ret;
         }
         if (orderBillDao.insert(orderBill) <= 0) {
             ret.setResult(CommonOperationResult.Failed);
-            ret.setDescription(messageSource.getMessage("system.common.operationFailed", null, Locale.getDefault()));
+            ret.setDescription(appCtx.getMessage("system.common.operationFailed", null, Locale.getDefault()));
             return ret;
         } else {
             ret.setResult(CommonOperationResult.Succeeded);
@@ -791,6 +798,11 @@ public class OrderService {
         return orderEvaluationDao.selectOrderEvaluationList(parameter);
     }
 
+    /**
+     * 订单状态变更时要判断订单的车辆首次保养状态单据的状态变更
+     *
+     * @param event 订单状态变更事件
+     */
     @EventListener(condition = "#event.original == true")
     public void onStatusChanged(OrderStatusChanged event) {
         Order order = event.getNewEntity();
@@ -821,5 +833,53 @@ public class OrderService {
         }
 
     }
+
+    /**
+     * 清理超期的已服务订单，将其状态变更为已确认.
+     */
+    @Scheduled(cron = "0 0 * * * *")
+    @Transactional(Constants.TRANSACTION_MANAGER)
+    public void clearOutdatedServicedOrder(){
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.MILLISECOND, 999);
+        calendar.set(Calendar.SECOND, 59);
+        calendar.set(Calendar.MINUTE, 59);
+        calendar.set(Calendar.HOUR_OF_DAY, 23);
+        calendar.add(Calendar.DATE, -servicedOrderTimeoutDay.getIneterValue());
+        
+        QueryOrderListParameter parameter = new QueryOrderListParameter();
+        parameter.setStatus(Collections.singletonList(OrderStatus.SERVICED));
+        parameter.setEndTime(calendar.getTime());
+        parameter.setPageSize(1000);
+        parameter.setPageIndex(0);
+        
+        for (PagedList<Order> pagedList = orderDao.selectOrderList(parameter); pagedList.getTotal() > 0; pagedList = orderDao.selectOrderList(parameter)) {
+            if (CollectionUtils.isNotEmpty(pagedList.getList())) {
+                for (Order order : pagedList.getList()) {
+                    Order oldOrder = ObjectUtils.clone(order);
+
+                    order.setStatus(OrderStatus.CONFIRMED);
+                    order.setModifierId(BigDecimal.ZERO);
+                    
+                    if (orderDao.update(order) > 0) {
+                        OrderStatusHis orderStatusHis = new OrderStatusHis();
+                        orderStatusHis.setOrderId(order.getId());
+                        orderStatusHis.setOldStatus(OrderStatus.SERVICED);
+                        orderStatusHis.setStatus(OrderStatus.CONFIRMED);
+                        orderStatusHis.setModifierId(BigDecimal.ZERO);
+                        orderStatusHisDao.insert(orderStatusHis);
+                                
+                        appCtx.publishEvent(new OrderStatusChanged(oldOrder, order));
+                    }
+                }
+            }
+            
+            if (pagedList.getTotal() < 1000) {
+                break;
+            }
+        }
+    }
+
+
 
 }
