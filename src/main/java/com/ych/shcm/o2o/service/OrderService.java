@@ -192,11 +192,9 @@ public class OrderService {
      */
     @Transactional
     public CommonOperationResultWidthData<Map<String, Object>> createOrder(Order order) {
-        CommonOperationResultWidthData<Map<String, Object>> ret = new CommonOperationResultWidthData();
+        CommonOperationResultWidthData<Map<String, Object>> ret = new CommonOperationResultWidthData<>();
         Map<String, Object> map = new HashMap<>();
         Car car = carDao.selectById(order.getCarId());
-
-        UserCar userCar = userCarDao.selectUserCarByUserIdAndCarId(order.getUserId(), order.getCarId());
 
         String orderNo = generateOrderNo();
         order.setOrderNo(orderNo);
@@ -434,7 +432,7 @@ public class OrderService {
     /**
      * 生成订单号
      *
-     * @return
+     * @return 订单号
      */
     private String generateOrderNo() {
         return "O" + DateFormatUtils.format(System.currentTimeMillis(), "yyyyMMddHHmmssSSS") + StringUtils.leftPad(serverNo, 3, '0') + StringUtils.leftPad(String.valueOf(Math.abs(flowNoSeq.incrementAndGet() % 10000)), 4, '0');
@@ -510,6 +508,7 @@ public class OrderService {
      * 订单评价
      *
      * @param orderEvaluation
+     *         评价信息
      */
     @Transactional
     public CommonOperationResultWidthData evaluateOrder(OrderEvaluation orderEvaluation) {
@@ -522,7 +521,6 @@ public class OrderService {
             Assert.notNull(orderEvaluation.getAttitude(), appCtx.getMessage("order.evaluation.attitude.required", null, Locale.getDefault()));
             Assert.notNull(orderEvaluation.getEfficiency(), appCtx.getMessage("order.evaluation.efficiency.required", null, Locale.getDefault()));
             Assert.notNull(orderEvaluation.getEnvironment(), appCtx.getMessage("order.evaluation.environment.required", null, Locale.getDefault()));
-            Assert.notNull(orderEvaluation.getOverallEvaluation(), appCtx.getMessage("order.evaluation.overall.required", null, Locale.getDefault()));
 
         } catch (IllegalArgumentException e) {
             ret.setResult(CommonOperationResult.IllegalArguments);
@@ -726,8 +724,8 @@ public class OrderService {
     /**
      * 计算佣金
      *
-     * @param order
-     * @return
+     * @param order 订单信息
+     * @return 佣金金额
      */
     private BigDecimal calculatedBrokerage(Order order) {
         BigDecimal incomes = BigDecimal.ZERO;
@@ -846,7 +844,8 @@ public class OrderService {
     /**
      * 订单状态变更时要判断订单的车辆首次保养状态单据的状态变更
      *
-     * @param event 订单状态变更事件
+     * @param event
+     *         订单状态变更事件
      */
     @EventListener(condition = "#event.original == true")
     public void onStatusChanged(OrderStatusChanged event) {
@@ -882,7 +881,7 @@ public class OrderService {
     /**
      * 清理超期的已服务订单，将其状态变更为已确认.
      */
-    @Scheduled(cron = "0 0 2 * * *")
+    @Scheduled(cron = "0 0 * * * *")
     @Transactional(Constants.TRANSACTION_MANAGER)
     public void clearOutdatedServicedOrder(){
         Calendar calendar = Calendar.getInstance();
@@ -894,7 +893,7 @@ public class OrderService {
         
         QueryOrderListParameter parameter = new QueryOrderListParameter();
         parameter.setStatus(Collections.singletonList(OrderStatus.SERVICED));
-        parameter.setModifyTimeEnd(calendar.getTime());
+        parameter.setEndTime(calendar.getTime());
         parameter.setPageSize(1000);
         parameter.setPageIndex(0);
         
