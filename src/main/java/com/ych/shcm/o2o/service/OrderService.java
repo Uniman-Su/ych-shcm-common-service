@@ -853,7 +853,7 @@ public class OrderService {
         Order order = event.getNewEntity();
         Car car = carDao.selectById(order.getCarId());
 
-        if (car.getFirstOrderId().equals(order.getId())) {
+        if (order.getId().equals(car.getFirstOrderId())) {
             switch(order.getStatus()) {
                 case CANCELED:
                 case REFUNDED:
@@ -882,7 +882,7 @@ public class OrderService {
     /**
      * 清理超期的已服务订单，将其状态变更为已确认.
      */
-    @Scheduled(cron = "0 0 * * * *")
+    @Scheduled(cron = "0 0 2 * * *")
     @Transactional(Constants.TRANSACTION_MANAGER)
     public void clearOutdatedServicedOrder(){
         Calendar calendar = Calendar.getInstance();
@@ -894,7 +894,7 @@ public class OrderService {
         
         QueryOrderListParameter parameter = new QueryOrderListParameter();
         parameter.setStatus(Collections.singletonList(OrderStatus.SERVICED));
-        parameter.setEndTime(calendar.getTime());
+        parameter.setModifyTimeEnd(calendar.getTime());
         parameter.setPageSize(1000);
         parameter.setPageIndex(0);
         
