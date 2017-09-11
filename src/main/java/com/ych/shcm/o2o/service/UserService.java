@@ -206,6 +206,8 @@ public class UserService {
                             car.setVin(payload.getVin());
                             car.setEffectTime(payload.getEffectiveTime());
                             car.setExpires(payload.getExpires());
+                            car.setRegistrationTime(payload.getRegistrationTime());
+                            car.setMileage(payload.getMileage());
                             carDao.insert(car);
 
                             userCar = new UserCar();
@@ -238,6 +240,7 @@ public class UserService {
                                 car.setFirstMaintenanceMoney(null);
                                 car.setFirstMaintenanceTime(null);
                                 car.setFirstOrderStatus(null);
+                                car.setMileage(payload.getMileage());
                                 carDao.update(car);
                             } else {
                                 oldFirstOrderId = car.getFirstOrderId();

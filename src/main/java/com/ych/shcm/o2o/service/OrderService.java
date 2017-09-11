@@ -11,6 +11,7 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateFormatUtils;
+import org.apache.commons.lang3.time.DateUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
@@ -30,10 +31,7 @@ import com.ych.shcm.o2o.event.OrderStatusChanged;
 import com.ych.shcm.o2o.model.*;
 import com.ych.shcm.o2o.parameter.QueryOrderAppointmentListParameter;
 import com.ych.shcm.o2o.parameter.QueryOrderListParameter;
-import com.ych.shcm.o2o.service.systemparamholder.ServiceProviderIncomesRate;
-import com.ych.shcm.o2o.service.systemparamholder.ServiceProviderSettleDelay;
-import com.ych.shcm.o2o.service.systemparamholder.ServicedOrderTimeoutDay;
-import com.ych.shcm.o2o.service.systemparamholder.ShopSettleDelay;
+import com.ych.shcm.o2o.service.systemparamholder.*;
 
 /**
  * 订单服务
@@ -114,6 +112,9 @@ public class OrderService {
     @Resource(name = ServicedOrderTimeoutDay.NAME)
     private SystemParameterHolder servicedOrderTimeoutDay;
 
+    @Resource(name = SelectableSecondSPMonth.NAME)
+    private SystemParameterHolder selectableSecondSPMonth;
+
     /**
      * 通过ID取得订单详情
      *
@@ -182,7 +183,9 @@ public class OrderService {
         for (OrderServicePack pack : order.getOrderServicePacks()) {
             ServicePack servicePack = null;
             if (isFirstMaintenance) {
-                if (pack.getServicePackId().compareTo(servicePacks.get(0).getId()) != 0) {
+                if (pack.getServicePackId().compareTo(servicePacks.get(0).getId()) != 0
+                        && !(pack.getServicePackId().equals(servicePacks.get(1).getId())
+                           && DateUtils.truncate(DateUtils.addMonths(car.getRegistrationTime(), selectableSecondSPMonth.getIneterValue()), Calendar.MONTH).compareTo(DateUtils.truncate(new Date(), Calendar.MONTH)) <= 0)){
                     ret.setResult(CommonOperationResult.IllegalArguments);
                     ret.setDescription(appCtx.getMessage("car.firstMaintenance.required", null, Locale.getDefault()));
                     return ret;
@@ -236,12 +239,14 @@ public class OrderService {
         order.setStatus(OrderStatus.UNPAYED);
         order.setMoney(orderPrice);
         orderDao.insert(order);
+
         if (isFirstMaintenance) {
             car.setFirstOrderId(order.getId());
             car.setFirstMaintenanceMoney(order.getMoney());
             car.setFirstOrderStatus(OrderStatus.UNPAYED);
             carDao.update(car);
         }
+
         for (OrderServicePack orderServicePack : forInsertPack) {
             orderServicePack.setOrderId(order.getId());
             orderServicePackDao.insert(orderServicePack);
@@ -250,6 +255,7 @@ public class OrderService {
                 orderServicePackItemDao.insert(orderServicePackItem);
             }
         }
+
         map.put("orderId", order.getId());
         map.put("orderNo", order.getOrderNo());
         ret.setData(map);
