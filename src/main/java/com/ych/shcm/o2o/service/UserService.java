@@ -163,8 +163,6 @@ public class UserService {
                 Assert.notNull(payload.getModelId(), messageSource.getMessage("accessChannel.car.modelId.required", null, Locale.getDefault()));
                 Assert.notNull(payload.getEffectiveTime(), messageSource.getMessage("accessChannel.effectiveTime.required", null, Locale.getDefault()));
                 Assert.notNull(payload.getExpires(), messageSource.getMessage("accessChannel.expires.required", null, Locale.getDefault()));
-                Assert.notNull(payload.getRegistrationTime(), messageSource.getMessage("accessChannel.registrationTime.required", null, Locale.getDefault()));
-                Assert.isTrue(payload.getMileage() > 0, messageSource.getMessage("accessChannel.mileage.required", null, Locale.getDefault()));
                 Assert.notNull(accessChannel, messageSource.getMessage("accessChannel.required", null, Locale.getDefault()));
             } catch (IllegalArgumentException e) {
                 response.setResult(CommonOperationResult.Failed.name());
@@ -248,7 +246,7 @@ public class UserService {
                             BigDecimal oldFirstOrderId;
                             OrderStatus oldFirstOrderStatus;
 
-                            if (car.getEffectTime().compareTo(payload.getEffectiveTime()) > 0) {
+                            if (payload.getEffectiveTime().compareTo(car.getEffectTime()) > 0) {
                                 CarExpiredMaintenanceInfo expiredMaintenanceInfo = new CarExpiredMaintenanceInfo();
                                 BeanUtils.copyProperties(car, expiredMaintenanceInfo);
                                 expiredMaintenanceInfo.setId(null);

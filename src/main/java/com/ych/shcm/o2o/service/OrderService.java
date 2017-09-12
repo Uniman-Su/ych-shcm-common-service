@@ -185,6 +185,7 @@ public class OrderService {
             if (isFirstMaintenance) {
                 if (pack.getServicePackId().compareTo(servicePacks.get(0).getId()) != 0
                         && !(pack.getServicePackId().equals(servicePacks.get(1).getId())
+                           && car.getRegistrationTime() != null
                            && DateUtils.truncate(DateUtils.addMonths(car.getRegistrationTime(), selectableSecondSPMonth.getIneterValue()), Calendar.MONTH).compareTo(DateUtils.truncate(new Date(), Calendar.MONTH)) <= 0)){
                     ret.setResult(CommonOperationResult.IllegalArguments);
                     ret.setDescription(appCtx.getMessage("car.firstMaintenance.required", null, Locale.getDefault()));
@@ -376,6 +377,10 @@ public class OrderService {
             orderStatusHisDao.insert(orderStatusHis);
             addSettleMoney(old);
             ret.setResult(CommonOperationResult.Succeeded);
+
+            Car car = carDao.selectById(old.getCarId());
+            car.setMileage(mileage);
+            carDao.update(car);
         } else {
             ret.setResult(CommonOperationResult.Failed);
             ret.setDescription(appCtx.getMessage("order.status.illegal", null, Locale.getDefault()));
