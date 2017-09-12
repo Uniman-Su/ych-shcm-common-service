@@ -186,7 +186,7 @@ public class OrderService {
                 if (pack.getServicePackId().compareTo(servicePacks.get(0).getId()) != 0
                         && !(pack.getServicePackId().equals(servicePacks.get(1).getId())
                            && car.getRegistrationTime() != null
-                           && DateUtils.truncate(DateUtils.addMonths(car.getRegistrationTime(), selectableSecondSPMonth.getIneterValue()), Calendar.MONTH).compareTo(DateUtils.truncate(new Date(), Calendar.MONTH)) <= 0)){
+                           && DateUtils.truncate(DateUtils.addMonths(car.getRegistrationTime(), selectableSecondSPMonth.getIneterValue()), Calendar.MONTH).compareTo(DateUtils.truncate(new Date(), Calendar.MONTH)) >= 0)){
                     ret.setResult(CommonOperationResult.IllegalArguments);
                     ret.setDescription(appCtx.getMessage("car.firstMaintenance.required", null, Locale.getDefault()));
                     return ret;
