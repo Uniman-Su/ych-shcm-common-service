@@ -1,12 +1,33 @@
 package com.ych.shcm.o2o.service;
 
-import java.math.BigDecimal;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
-
+import com.ych.core.model.CommonOperationResult;
+import com.ych.shcm.o2o.dao.CarDao;
+import com.ych.shcm.o2o.dao.CarModelDao;
+import com.ych.shcm.o2o.dao.OrderDao;
+import com.ych.shcm.o2o.dao.OrderStatusHisDao;
+import com.ych.shcm.o2o.dao.UserCarDao;
+import com.ych.shcm.o2o.dao.UserDao;
+import com.ych.shcm.o2o.dao.UserThirdAuthDao;
+import com.ych.shcm.o2o.event.OrderStatusChanged;
+import com.ych.shcm.o2o.model.AccessChannel;
+import com.ych.shcm.o2o.model.Car;
+import com.ych.shcm.o2o.model.CarExpiredMaintenanceInfo;
+import com.ych.shcm.o2o.model.CarModel;
+import com.ych.shcm.o2o.model.CarUserHistory;
+import com.ych.shcm.o2o.model.Constants;
+import com.ych.shcm.o2o.model.Order;
+import com.ych.shcm.o2o.model.OrderStatus;
+import com.ych.shcm.o2o.model.OrderStatusHis;
+import com.ych.shcm.o2o.model.ThirdAuthType;
+import com.ych.shcm.o2o.model.User;
+import com.ych.shcm.o2o.model.UserAccessChannel;
+import com.ych.shcm.o2o.model.UserCar;
+import com.ych.shcm.o2o.model.UserThirdAuth;
+import com.ych.shcm.o2o.openinf.GuaranteeRequestPayload;
+import com.ych.shcm.o2o.openinf.IRequest;
+import com.ych.shcm.o2o.openinf.IResponse;
+import com.ych.shcm.o2o.openinf.RequestAction;
+import com.ych.shcm.o2o.openinf.Response;
 import org.apache.commons.lang3.ObjectUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,11 +42,12 @@ import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.Assert;
 
-import com.ych.core.model.CommonOperationResult;
-import com.ych.shcm.o2o.dao.*;
-import com.ych.shcm.o2o.event.OrderStatusChanged;
-import com.ych.shcm.o2o.model.*;
-import com.ych.shcm.o2o.openinf.*;
+import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
+import java.math.BigDecimal;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
 
 /**
  * 用户的服务
@@ -141,6 +163,8 @@ public class UserService {
                 Assert.notNull(payload.getModelId(), messageSource.getMessage("accessChannel.car.modelId.required", null, Locale.getDefault()));
                 Assert.notNull(payload.getEffectiveTime(), messageSource.getMessage("accessChannel.effectiveTime.required", null, Locale.getDefault()));
                 Assert.notNull(payload.getExpires(), messageSource.getMessage("accessChannel.expires.required", null, Locale.getDefault()));
+                Assert.notNull(payload.getRegistrationTime(), messageSource.getMessage("accessChannel.registrationTime.required", null, Locale.getDefault()));
+                Assert.isTrue(payload.getMileage() > 0, messageSource.getMessage("accessChannel.mileage.required", null, Locale.getDefault()));
                 Assert.notNull(accessChannel, messageSource.getMessage("accessChannel.required", null, Locale.getDefault()));
             } catch (IllegalArgumentException e) {
                 response.setResult(CommonOperationResult.Failed.name());
@@ -206,6 +230,8 @@ public class UserService {
                             car.setVin(payload.getVin());
                             car.setEffectTime(payload.getEffectiveTime());
                             car.setExpires(payload.getExpires());
+                            car.setMileage(payload.getMileage());
+                            car.setRegistrationTime(payload.getRegistrationTime());
                             carDao.insert(car);
 
                             userCar = new UserCar();
@@ -238,6 +264,8 @@ public class UserService {
                                 car.setFirstMaintenanceMoney(null);
                                 car.setFirstMaintenanceTime(null);
                                 car.setFirstOrderStatus(null);
+                                car.setMileage(payload.getMileage());
+                                car.setRegistrationTime(payload.getRegistrationTime());
                                 carDao.update(car);
                             } else {
                                 oldFirstOrderId = car.getFirstOrderId();
