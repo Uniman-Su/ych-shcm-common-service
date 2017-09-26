@@ -182,6 +182,7 @@ public class OrderService {
 
         for (OrderServicePack pack : order.getOrderServicePacks()) {
             ServicePack servicePack = null;
+
             if (isFirstMaintenance) {
                 if (pack.getServicePackId().compareTo(servicePacks.get(0).getId()) != 0
                         && !(pack.getServicePackId().equals(servicePacks.get(1).getId())
@@ -191,14 +192,14 @@ public class OrderService {
                     ret.setDescription(appCtx.getMessage("car.firstMaintenance.required", null, Locale.getDefault()));
                     return ret;
                 }
-                servicePack = servicePacks.get(0);
-            } else {
-                for (ServicePack servicePackIn : servicePacks) {
-                    if (pack.getServicePackId().compareTo(servicePackIn.getId()) == 0) {
-                        servicePack = servicePackIn;
-                    }
+            }
+
+            for (ServicePack servicePackIn : servicePacks) {
+                if (pack.getServicePackId().compareTo(servicePackIn.getId()) == 0) {
+                    servicePack = servicePackIn;
                 }
             }
+
             if (servicePack == null) {
                 ret.setResult(CommonOperationResult.IllegalArguments);
                 ret.setDescription(appCtx.getMessage("servicePack.id.notExists", null, Locale.getDefault()));
