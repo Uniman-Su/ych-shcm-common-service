@@ -1,8 +1,6 @@
 package com.ych.shcm.o2o.service;
 
 import java.math.BigDecimal;
-import java.math.MathContext;
-import java.math.RoundingMode;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Resource;
@@ -555,12 +553,12 @@ public class OrderService {
         BigDecimal brokerage = calculatedBrokerage(order);
 
         BigDecimal shopMoney = order.getMoney().subtract(brokerage);
-        BigDecimal shopChannelFee = shopMoney.multiply(channelFee).divide(order.getMoney(), new MathContext(2, RoundingMode.UP));
+        BigDecimal shopChannelFee = shopMoney.multiply(channelFee).divide(order.getMoney(), 2, BigDecimal.ROUND_UP);
         BigDecimal shopIncomes = shopMoney.subtract(shopChannelFee);
 
         BigDecimal spAndPlatformChannelFee = channelFee.subtract(shopChannelFee);
-        BigDecimal spBrokerage = brokerage.multiply(spIncomesRate).divide(BigDecimal.valueOf(100), new MathContext(2, RoundingMode.DOWN));
-        BigDecimal spChannelFee = spBrokerage.multiply(spAndPlatformChannelFee).divide(brokerage, new MathContext(2, RoundingMode.UP));
+        BigDecimal spBrokerage = brokerage.multiply(spIncomesRate).divide(BigDecimal.valueOf(100), 2, BigDecimal.ROUND_DOWN);
+        BigDecimal spChannelFee = spBrokerage.multiply(spAndPlatformChannelFee).divide(brokerage, 2, BigDecimal.ROUND_UP);
         BigDecimal spIncomes = spBrokerage.subtract(spChannelFee);
 
         BigDecimal platformChannelFee = channelFee.subtract(shopChannelFee).subtract(spChannelFee);
